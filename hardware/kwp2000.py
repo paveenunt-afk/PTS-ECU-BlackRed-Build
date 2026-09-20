@@ -1,0 +1,1 @@
+class KwpError(RuntimeError): pass
