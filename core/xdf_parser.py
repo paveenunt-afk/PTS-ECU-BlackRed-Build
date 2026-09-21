@@ -300,14 +300,56 @@ def parse_xdf_text(text: str) -> XdfDocument:
 
 def parse_xdf_bytes(data: bytes) -> XdfDocument:
     if not data:
-        raise XdfParseError("Malformed XDF/XML: file is empty")
+        raise XdfParseError("ไฟล์ XDF ว่างเปล่า ไม่มีข้อมูลให้อ่าน")
+
+    signatures = {
+        b"PK\x03\x04": "ไฟล์ ZIP",
+        b"Rar!": "ไฟล์ RAR",
+        b"7z\xbc\xaf\x27\x1c": "ไฟล์ 7-Zip",
+        b"MZ": "โปรแกรม Windows",
+    }
+    for signature, kind in signatures.items():
+        if data.startswith(signature):
+            raise XdfParseError(
+                f"ไฟล์ที่เลือกเป็น{kind} ไม่ใช่ไฟล์กำหนดตาราง XDF กรุณาแตกไฟล์และเลือกไฟล์นามสกุล .xdf ที่อยู่ด้านใน"
+            )
+
+    candidates: list[bytes | str] = [data]
+    # Some older tuning tools export UTF-16 XML without a BOM. Detect the
+    # interleaved NUL pattern and decode it before handing it to ElementTree.
+    sample = data[:200]
+    if sample.count(b"\x00") > max(4, len(sample) // 5):
+        for encoding in ("utf-16-le", "utf-16-be"):
+            try:
+                candidates.append(data.decode(encoding))
+            except UnicodeDecodeError:
+                pass
+    # A few exporters place whitespace/control bytes before the XML header.
+    first_tag = data.find(b"<")
+    if 0 < first_tag < 256:
+        candidates.append(data[first_tag:])
+
+    last_error: ET.ParseError | None = None
+    for candidate in candidates:
+        try:
+            root = ET.fromstring(candidate)
+            return _document_from_root(root)
+        except ET.ParseError as exc:
+            last_error = exc
     try:
-        # Passing raw bytes lets ElementTree honor the XML declaration and
-        # BOM itself (UTF-8, UTF-16 LE/BE and other declared encodings).
-        root = ET.fromstring(data)
-    except ET.ParseError as exc:
-        raise XdfParseError(f"Malformed XDF/XML: {exc}") from exc
-    return _document_from_root(root)
+        preview = data[:80].decode("utf-8", errors="replace").strip()
+    except Exception:
+        preview = ""
+    detail = f" ({last_error})" if last_error else ""
+    hint = ""
+    if preview.lower().startswith(("<!doctype html", "<html")):
+        hint = " ไฟล์นี้เป็นหน้าเว็บ อาจดาวน์โหลดผิดไฟล์"
+    raise XdfParseError(
+        "ไม่สามารถอ่านไฟล์ XDF ได้ เพราะรูปแบบภายในไม่ใช่ XML ที่ถูกต้อง"
+        + hint
+        + " กรุณาเลือกไฟล์ .xdf ต้นฉบับจากโปรแกรม TunerPro"
+        + detail
+    ) from last_error
 
 
 def parse_xdf(path: str | Path) -> XdfDocument:
@@ -315,7 +357,7 @@ def parse_xdf(path: str | Path) -> XdfDocument:
     try:
         data = p.read_bytes()
     except OSError as exc:
-        raise XdfParseError(f"Unable to read XDF file: {exc}") from exc
+        raise XdfParseError(f"ไม่สามารถอ่านไฟล์ XDF ได้: {exc}") from exc
     doc = parse_xdf_bytes(data)
     doc.source_path = p
     return doc
