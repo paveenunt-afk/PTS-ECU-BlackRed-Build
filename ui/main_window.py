@@ -201,13 +201,13 @@ class MainWindow(QMainWindow):
             ports = SerialInterface.list_ports()
             self.welcome.set_ports(ports)
             if not ports:
-                self.statusBar().showMessage("No serial COM ports detected", 4000)
+                self.statusBar().showMessage("ไม่พบพอร์ต COM", 4000)
             else:
-                self.statusBar().showMessage(f"Detected {len(ports)} serial port(s)", 4000)
+                self.statusBar().showMessage(f"พบพอร์ต COM จำนวน {len(ports)} พอร์ต", 4000)
         except Exception as exc:
             self.welcome.set_ports([])
             if show_dialog:
-                show_error(self, "COM Port Detection", str(exc))
+                show_error(self, "ตรวจหาพอร์ต COM", str(exc))
             else:
                 self.statusBar().showMessage(str(exc), 5000)
 
@@ -234,7 +234,7 @@ class MainWindow(QMainWindow):
             self.state.connection_state = "Error"
             self.welcome.set_status("Error", False)
             if show_dialog:
-                show_error(self, "Connection Error", str(exc))
+                show_error(self, "เกิดข้อผิดพลาดในการเชื่อมต่อ", str(exc))
 
     def disconnect_backend(self) -> None:
         if self.state.logging:
@@ -242,7 +242,7 @@ class MainWindow(QMainWindow):
         try:
             self.backend.disconnect()
         except Exception as exc:
-            show_error(self, "Disconnect Error", str(exc))
+            show_error(self, "เกิดข้อผิดพลาดขณะตัดการเชื่อมต่อ", str(exc))
         self.state.connection_state = "Offline"
         self.welcome.set_status("Offline", False)
         self._update_flash_state()
@@ -251,7 +251,7 @@ class MainWindow(QMainWindow):
         try:
             if isinstance(self.backend, SerialInterface):
                 if self.state.ecu_profile is None:
-                    raise RuntimeError("Select an ECU profile before KWP initialization")
+                    raise RuntimeError("กรุณาเลือกโปรไฟล์ ECU ก่อนเริ่มต้น KWP")
                 candidate, response = self.backend.initialize_kwp_profile(self.state.ecu_profile)
                 info = {
                     "interface": self.backend.port or "Serial",
@@ -266,7 +266,7 @@ class MainWindow(QMainWindow):
                 info = self.backend.read_vehicle_info()
                 self.welcome.set_vehicle_info(info)
         except Exception as exc:
-            show_error(self, "Vehicle Information / KWP Init", str(exc))
+            show_error(self, "ข้อมูลรถ / การเริ่มต้น KWP", str(exc))
 
     def _last_folder(self) -> str:
         return self.state.last_folder or str(Path.home())
@@ -277,7 +277,7 @@ class MainWindow(QMainWindow):
         self.settings.setValue("lastFolder", folder)
 
     def open_bin(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "Open ECU BIN", self._last_folder(), "ECU Binary (*.bin *.BIN);;All Files (*)")
+        path, _ = QFileDialog.getOpenFileName(self, "เปิดไฟล์ ECU BIN", self._last_folder(), "ไฟล์ ECU Binary (*.bin *.BIN);;ไฟล์ทั้งหมด (*)")
         if path:
             self.load_bin_path(path)
 
@@ -289,10 +289,10 @@ class MainWindow(QMainWindow):
             self._select_first_table_if_possible()
             self._update_flash_state()
         except Exception as exc:
-            show_error(self, "Open BIN", str(exc))
+            show_error(self, "เปิดไฟล์ BIN", str(exc))
 
     def open_xdf(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "Open XDF", self._last_folder(), "XDF/XML (*.xdf *.xml *.XDF);;All Files (*)")
+        path, _ = QFileDialog.getOpenFileName(self, "เปิดไฟล์ XDF", self._last_folder(), "ไฟล์ XDF/XML (*.xdf *.xml *.XDF);;ไฟล์ทั้งหมด (*)")
         if path:
             self.load_xdf_path(path)
 
@@ -305,9 +305,9 @@ class MainWindow(QMainWindow):
             self._update_file_labels()
             self._select_first_table_if_possible()
             if doc.warnings:
-                self.statusBar().showMessage(f"XDF loaded with {len(doc.warnings)} warning(s)", 5000)
+                self.statusBar().showMessage(f"โหลด XDF แล้ว พบคำเตือน {len(doc.warnings)} รายการ", 5000)
         except Exception as exc:
-            show_error(self, "Open XDF", str(exc))
+            show_error(self, "เปิดไฟล์ XDF", str(exc))
 
     def _select_first_table_if_possible(self) -> None:
         if self.state.bin_image is None or self.state.xdf_document is None or not self.state.xdf_document.tables:
@@ -316,7 +316,7 @@ class MainWindow(QMainWindow):
 
     def select_table(self, table) -> None:
         if self.state.bin_image is None:
-            show_error(self, "Tuning Grid", "Open a BIN file before loading a calibration map.")
+            show_error(self, "ตารางปรับจูน", "กรุณาเปิดไฟล์ BIN ก่อนโหลดแผนที่ปรับเทียบ")
             return
         try:
             cmap = CalibrationMap(self.state.bin_image, table)
@@ -324,17 +324,17 @@ class MainWindow(QMainWindow):
             self.tuning.load_map(cmap)
             self.tabs.setCurrentWidget(self.tuning)
         except Exception as exc:
-            show_error(self, "Map Load Error", str(exc))
+            show_error(self, "โหลดแผนที่ไม่สำเร็จ", str(exc))
 
     def save_bin(self) -> None:
         image = self.state.bin_image
         if image is None:
-            show_error(self, "Save BIN", "No BIN is loaded.")
+            show_error(self, "บันทึก BIN", "ยังไม่ได้โหลดไฟล์ BIN")
             return
         demo_dir = (Path(__file__).resolve().parent.parent / "demo").resolve()
         source = image.source_path.resolve() if image.source_path else None
         if source is None or demo_dir in source.parents:
-            path, _ = QFileDialog.getSaveFileName(self, "Save ECU BIN As", self._last_folder(), "ECU Binary (*.bin)")
+            path, _ = QFileDialog.getSaveFileName(self, "บันทึก ECU BIN เป็น", self._last_folder(), "ไฟล์ ECU Binary (*.bin)")
             if not path:
                 return
             target = Path(path)
@@ -343,10 +343,10 @@ class MainWindow(QMainWindow):
         try:
             image.save(target, backup_existing=True)
             self._remember_folder(target)
-            self.statusBar().showMessage(f"Saved {target.name}", 4000)
+            self.statusBar().showMessage(f"บันทึก {target.name} แล้ว", 4000)
             self._update_file_labels()
         except Exception as exc:
-            show_error(self, "Save BIN", str(exc))
+            show_error(self, "บันทึก BIN", str(exc))
 
     def _map_changed(self) -> None:
         self._update_file_labels()
@@ -374,7 +374,7 @@ class MainWindow(QMainWindow):
         if self.state.logging or self.state.flashing:
             return
         if not self.backend.is_connected():
-            show_error(self, "Datalog", "Connect an interface first.")
+            show_error(self, "บันทึกข้อมูล", "กรุณาเชื่อมต่ออินเทอร์เฟซก่อน")
             return
         self.logger_worker = LoggerWorker(self.backend, poll_interval=0.05)
         self.logger_thread = QThread(self)
@@ -406,7 +406,7 @@ class MainWindow(QMainWindow):
         self.logger_thread = None
         self.logger.run_btn.blockSignals(True)
         self.logger.run_btn.setChecked(False)
-        self.logger.run_btn.setText("RUN")
+        self.logger.run_btn.setText("เริ่ม")
         self.logger.run_btn.blockSignals(False)
         if self.backend.is_connected():
             text = "Mock Connected" if isinstance(self.backend, MockInterface) else "Serial Connected"
@@ -418,7 +418,7 @@ class MainWindow(QMainWindow):
         self._update_flash_state()
 
     def _logger_error(self, message: str) -> None:
-        self.statusBar().showMessage(f"Logger error: {message}", 6000)
+        self.statusBar().showMessage(f"ข้อผิดพลาดการบันทึกข้อมูล: {message}", 6000)
 
     def _sample_received(self, sample) -> None:
         self.logger.append_sample(sample)
@@ -432,26 +432,26 @@ class MainWindow(QMainWindow):
     def _update_flash_state(self) -> None:
         if self.state.bin_image is None or self.state.ecu_profile is None:
             self.welcome.flash_btn.setEnabled(False)
-            self.welcome.flash_btn.setToolTip("Load a BIN and select an ECU profile")
+            self.welcome.flash_btn.setToolTip("โหลดไฟล์ BIN และเลือกโปรไฟล์ ECU")
             return
         result = validate_flash_preconditions(self.state.bin_image, self.state.ecu_profile, self.backend)
         enabled = result.ok and not self.state.flashing
         self.welcome.flash_btn.setEnabled(enabled)
         details = list(result.errors) + list(result.warnings)
-        self.welcome.flash_btn.setToolTip("\n".join(details) if details else "Flash preconditions satisfied")
+        self.welcome.flash_btn.setToolTip("\n".join(details) if details else "พร้อมเขียนข้อมูล ECU")
 
     def flash_image(self) -> None:
         if self.state.bin_image is None or self.state.ecu_profile is None:
-            show_error(self, "Flash ECU", "Load a BIN and select a supported ECU profile first.")
+            show_error(self, "เขียนข้อมูล ECU", "กรุณาโหลดไฟล์ BIN และเลือกโปรไฟล์ ECU ที่รองรับ")
             return
         check = validate_flash_preconditions(self.state.bin_image, self.state.ecu_profile, self.backend)
         if not check.ok:
-            show_error(self, "Flash Preconditions", "\n".join(check.errors))
+            show_error(self, "เงื่อนไขก่อนเขียน ECU", "\n".join(check.errors))
             return
         if not confirm_flash(self, self.state.ecu_profile.profile_id, check.warnings):
             return
         if self.state.logging and not self.stop_logging(wait=True):
-            show_error(self, "Flash ECU", "Logger thread did not stop cleanly; flash cancelled.")
+            show_error(self, "เขียนข้อมูล ECU", "ระบบบันทึกข้อมูลยังไม่หยุด จึงยกเลิกการเขียนเพื่อความปลอดภัย")
             return
         self.state.flashing = True
         self.welcome.set_status("Flashing", True)
@@ -463,7 +463,7 @@ class MainWindow(QMainWindow):
         self.flash_thread.started.connect(self.flash_worker.run)
         self.flash_worker.progress.connect(self._flash_progress)
         self.flash_worker.status_changed.connect(lambda msg: self.statusBar().showMessage(msg))
-        self.flash_worker.error_occurred.connect(lambda msg: show_error(self, "Flash Error", msg))
+        self.flash_worker.error_occurred.connect(lambda msg: show_error(self, "การเขียน ECU ผิดพลาด", msg))
         self.flash_worker.finished.connect(self.flash_thread.quit)
         self.flash_worker.finished.connect(self._flash_finished)
         self.flash_thread.finished.connect(self._flash_thread_finished)
@@ -477,7 +477,7 @@ class MainWindow(QMainWindow):
         self.state.flashing = False
         if success:
             self.welcome.set_status("Flash Verified", True)
-            show_info(self, "Flash Complete", "The image was written and verified by the selected backend/profile.")
+            show_info(self, "เขียน ECU สำเร็จ", "เขียนและตรวจสอบข้อมูลด้วยอุปกรณ์และโปรไฟล์ที่เลือกสำเร็จแล้ว")
         else:
             self.welcome.set_status("Flash Stopped", self.backend.is_connected())
         self._update_flash_state()
@@ -509,11 +509,11 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event) -> None:
         if self.state.flashing:
-            QMessageBox.warning(self, "Flash In Progress", "The application cannot close during an active flash operation.")
+            QMessageBox.warning(self, "กำลังเขียน ECU", "ไม่สามารถปิดโปรแกรมระหว่างกำลังเขียนข้อมูล ECU")
             event.ignore()
             return
         if self.state.logging and not self.stop_logging(wait=True):
-            QMessageBox.warning(self, "Logger Still Running", "The logger worker did not stop cleanly. Disconnect the interface and try again.")
+            QMessageBox.warning(self, "ระบบบันทึกข้อมูลยังทำงาน", "กรุณาตัดการเชื่อมต่ออินเทอร์เฟซแล้วลองอีกครั้ง")
             event.ignore()
             return
         try:

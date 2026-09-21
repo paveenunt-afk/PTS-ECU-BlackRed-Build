@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (
     QComboBox, QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton,
@@ -51,6 +53,12 @@ class WelcomePage(QWidget):
 
         center = QFrame()
         center.setObjectName("heroPanel")
+        background = Path(__file__).resolve().parent.parent / "assets" / "ecu_tuning_background_v2.jpg"
+        if background.exists():
+            center.setStyleSheet(
+                "QFrame#heroPanel { border-image: url('" + background.as_posix() + "') 0 0 0 0 stretch stretch; }"
+                "QLabel { background: rgba(0, 0, 0, 145); padding: 6px; border-radius: 6px; }"
+            )
         center_layout = QVBoxLayout(center)
         center_layout.setAlignment(Qt.AlignCenter)
         brand = QLabel("PTS ECU LINK")
@@ -111,7 +119,7 @@ class WelcomePage(QWidget):
         c.addWidget(read_info)
         c.addWidget(QLabel("เสียงบุคคล (หญิง/ชายตามเสียงใน Windows)"))
         self.voice_combo = QComboBox()
-        self.voice_combo.addItem("System default")
+        self.voice_combo.addItem("เสียงเริ่มต้นของระบบ")
         c.addWidget(self.voice_combo)
         voice_options = QHBoxLayout()
         voice_options.addWidget(QLabel("ความเร็ว"))
@@ -176,7 +184,14 @@ class WelcomePage(QWidget):
                     break
 
     def set_status(self, text: str, connected: bool = False) -> None:
-        self.status.setText(text.upper())
+        translations = {
+            "Offline": "ออฟไลน์", "Error": "เกิดข้อผิดพลาด",
+            "Mock Connected": "เชื่อมต่อโหมดจำลองแล้ว",
+            "Serial Connected": "เชื่อมต่อ Serial แล้ว",
+            "Logging": "กำลังบันทึกข้อมูล", "Flashing": "กำลังเขียน ECU",
+            "Flash Verified": "ตรวจสอบการเขียนสำเร็จ", "Flash Stopped": "หยุดการเขียนแล้ว",
+        }
+        self.status.setText(translations.get(text, text).upper())
         self.status.setProperty("connected", connected)
         self.status.style().unpolish(self.status)
         self.status.style().polish(self.status)

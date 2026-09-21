@@ -10,9 +10,9 @@ def show_info(parent: QWidget, title: str, message: str) -> None:
 
 
 def confirm_flash(parent: QWidget, profile_name: str, warnings=()) -> bool:
-    text = f"Flash the loaded BIN using profile:\n{profile_name}?"
+    text = f"ยืนยันการเขียนไฟล์ BIN ด้วยโปรไฟล์:\n{profile_name}?"
     if warnings:
-        text += "\n\nWarnings:\n" + "\n".join(f"• {w}" for w in warnings)
-    text += "\n\nDo not disconnect power or the interface during an active write."
-    answer = QMessageBox.warning(parent, "Confirm ECU Flash", text, QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        text += "\n\nคำเตือน:\n" + "\n".join(f"• {w}" for w in warnings)
+    text += "\n\nห้ามตัดไฟหรือถอดอินเทอร์เฟซระหว่างเขียนข้อมูล"
+    answer = QMessageBox.warning(parent, "ยืนยันการเขียน ECU", text, QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
     return answer == QMessageBox.Yes
