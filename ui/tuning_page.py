@@ -26,7 +26,7 @@ class TuningPage(QWidget):
         left = QFrame()
         left.setObjectName("panel")
         left_layout = QVBoxLayout(left)
-        title = QLabel("PARAMETER TREE")
+        title = QLabel("รายการพารามิเตอร์")
         title.setObjectName("sectionTitle")
         left_layout.addWidget(title)
         self.tree = QTreeWidget()
@@ -39,23 +39,23 @@ class TuningPage(QWidget):
         right.setObjectName("panel")
         right_layout = QVBoxLayout(right)
         toolbar = QHBoxLayout()
-        toolbar.addWidget(QLabel("Quick Math"))
+        toolbar.addWidget(QLabel("ปรับค่าแบบรวดเร็ว"))
         self.formula = QLineEdit("+1.5")
-        self.formula.setPlaceholderText("+1.5   -2   *1.1   /1.05   or direct value")
+        self.formula.setPlaceholderText("+1.5   -2   *1.1   /1.05   หรือใส่ค่าโดยตรง")
         self.formula.returnPressed.connect(self._apply_formula)
         toolbar.addWidget(self.formula, 1)
-        apply_btn = QPushButton("APPLY TO SELECTION")
+        apply_btn = QPushButton("ใช้กับช่องที่เลือก")
         apply_btn.clicked.connect(self._apply_formula)
-        undo_btn = QPushButton("UNDO")
+        undo_btn = QPushButton("ย้อนกลับ")
         undo_btn.clicked.connect(self._undo)
-        redo_btn = QPushButton("REDO")
+        redo_btn = QPushButton("ทำซ้ำ")
         redo_btn.clicked.connect(self._redo)
         toolbar.addWidget(apply_btn)
         toolbar.addWidget(undo_btn)
         toolbar.addWidget(redo_btn)
         right_layout.addLayout(toolbar)
 
-        self.map_title = QLabel("No table selected")
+        self.map_title = QLabel("ยังไม่ได้เลือกตาราง")
         self.map_title.setObjectName("mapTitle")
         right_layout.addWidget(self.map_title)
         self.grid = TuningGrid()
@@ -74,7 +74,7 @@ class TuningPage(QWidget):
         self._items.clear()
         groups: dict[str, QTreeWidgetItem] = {}
         for idx, table in enumerate(doc.tables):
-            group_name = table.category or "Calibration Maps"
+            group_name = table.category or "แผนที่ปรับจูน"
             parent = groups.get(group_name)
             if parent is None:
                 parent = QTreeWidgetItem([group_name])

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from PyQt5.QtCore import QSettings, QThread, QTimer, Qt
 from PyQt5.QtWidgets import (
-    QAction, QDockWidget, QFileDialog, QMainWindow, QMessageBox, QTabWidget
+    QAction, QApplication, QDockWidget, QFileDialog, QMainWindow, QMessageBox, QTabWidget
 )
 
 from core.bin_engine import BinImage
@@ -30,7 +30,7 @@ from voice_manager import list_voices, speak
 class MainWindow(QMainWindow):
     def __init__(self, parent=None, *, auto_start_mock: bool = True):
         super().__init__(parent)
-        self.setWindowTitle("PTS ECU Tuning, Data Logger & Software Flash")
+        self.setWindowTitle("PTS ECU — โปรแกรมปรับจูน บันทึกข้อมูล และแฟลช ECU")
         self.resize(1400, 900)
         self.setMinimumSize(1050, 680)
 
@@ -53,12 +53,12 @@ class MainWindow(QMainWindow):
         self.welcome = WelcomePage()
         self.tuning = TuningPage()
         self.logger = LoggerPage()
-        self.tabs.addTab(self.welcome, "Welcome")
-        self.tabs.addTab(self.tuning, "Tuning Grid")
-        self.tabs.addTab(self.logger, "Datalog Graph")
+        self.tabs.addTab(self.welcome, "หน้าหลัก")
+        self.tabs.addTab(self.tuning, "ตารางปรับจูน")
+        self.tabs.addTab(self.logger, "กราฟข้อมูลสด")
 
         self.serial_console = SerialConsole()
-        self.serial_dock = QDockWidget("Serial TX/RX Console", self)
+        self.serial_dock = QDockWidget("ข้อมูลรับ–ส่ง Serial", self)
         self.serial_dock.setWidget(self.serial_console)
         self.serial_dock.setAllowedAreas(Qt.BottomDockWidgetArea | Qt.RightDockWidgetArea)
         self.addDockWidget(Qt.BottomDockWidgetArea, self.serial_dock)
@@ -74,15 +74,16 @@ class MainWindow(QMainWindow):
         self._update_file_labels()
         self._update_flash_state()
         self._load_voices()
+        self._apply_theme(self.settings.value("theme", "ดำ–แดง", type=str))
         if auto_start_mock:
             QTimer.singleShot(250, self._auto_start_mock)
 
     def _create_menu(self) -> None:
-        file_menu = self.menuBar().addMenu("File")
+        file_menu = self.menuBar().addMenu("ไฟล์")
         for text, slot, shortcut in (
-            ("Open BIN…", self.open_bin, "Ctrl+O"),
-            ("Open XDF…", self.open_xdf, "Ctrl+Alt+O"),
-            ("Save BIN", self.save_bin, "Ctrl+S"),
+            ("เปิด BIN…", self.open_bin, "Ctrl+O"),
+            ("เปิด XDF…", self.open_xdf, "Ctrl+Alt+O"),
+            ("บันทึก BIN", self.save_bin, "Ctrl+S"),
         ):
             action = QAction(text, self)
             action.triggered.connect(slot)
@@ -90,19 +91,19 @@ class MainWindow(QMainWindow):
                 action.setShortcut(shortcut)
             file_menu.addAction(action)
         file_menu.addSeparator()
-        exit_action = QAction("Exit", self)
+        exit_action = QAction("ออกจากโปรแกรม", self)
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
 
-        connection_menu = self.menuBar().addMenu("Connection")
-        connect_action = QAction("Connect / Disconnect", self)
+        connection_menu = self.menuBar().addMenu("การเชื่อมต่อ")
+        connect_action = QAction("เชื่อมต่อ / ตัดการเชื่อมต่อ", self)
         connect_action.triggered.connect(self.toggle_connection)
         connection_menu.addAction(connect_action)
-        refresh_action = QAction("Refresh COM Ports", self)
+        refresh_action = QAction("ค้นหาพอร์ต COM ใหม่", self)
         refresh_action.triggered.connect(self.refresh_ports)
         connection_menu.addAction(refresh_action)
 
-        view_menu = self.menuBar().addMenu("View")
+        view_menu = self.menuBar().addMenu("มุมมอง")
         view_menu.addAction(self.serial_dock.toggleViewAction())
 
     def _wire_signals(self) -> None:
@@ -116,6 +117,7 @@ class MainWindow(QMainWindow):
         self.welcome.save_requested.connect(self.save_bin)
         self.welcome.flash_requested.connect(self.flash_image)
         self.welcome.voice_test_requested.connect(self._test_voice)
+        self.welcome.theme_changed.connect(self._apply_theme)
 
         self.tuning.table_selected.connect(self.select_table)
         self.tuning.error_occurred.connect(lambda msg: show_error(self, "Tuning Error", msg))
@@ -129,10 +131,26 @@ class MainWindow(QMainWindow):
         self.welcome.voice_combo.clear()
         self.welcome.voice_combo.addItems(list_voices())
 
-    def _test_voice(self, voice_name: str) -> None:
-        ok = speak("พร้อมใช้งานระบบเสียง PTS ECU Tuning", voice_name)
+    def _test_voice(self, voice_name: str, rate: int, volume: int) -> None:
+        ok = speak("พร้อมใช้งานระบบเสียง PTS ECU สำหรับการปรับจูนรถ", voice_name, rate, volume)
         if not ok:
-            self.statusBar().showMessage("TTS is available on Windows", 4000)
+            self.statusBar().showMessage("ระบบเสียงพูดใช้งานได้บน Windows", 4000)
+
+    def _apply_theme(self, theme_name: str) -> None:
+        colors = {
+            "ดำ–แดง": ("#ff3038", "#a80f16", "#5b2222"),
+            "ดำ–ฟ้า": ("#29a8ff", "#075f9e", "#174965"),
+            "ดำ–ส้ม": ("#ff8a24", "#a94b08", "#653619"),
+            "ดำ–เขียว": ("#36d47b", "#08783a", "#1b5c3a"),
+        }
+        accent, primary, border = colors.get(theme_name, colors["ดำ–แดง"])
+        qss_path = Path(__file__).resolve().parent.parent / "assets" / "theme.qss"
+        if qss_path.exists() and QApplication.instance() is not None:
+            qss = qss_path.read_text(encoding="utf-8")
+            qss = qss.replace("#ff3038", accent).replace("#FF3038", accent)
+            qss = qss.replace("#a80f16", primary).replace("#5b2222", border)
+            QApplication.instance().setStyleSheet(qss)
+        self.settings.setValue("theme", theme_name)
 
     def _auto_start_mock(self) -> None:
         if self.welcome.interface_combo.currentText() != "Mock":

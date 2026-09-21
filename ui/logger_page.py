@@ -20,21 +20,21 @@ class LoggerPage(QWidget):
         graph_panel = QFrame()
         graph_panel.setObjectName("panel")
         graph_layout = QVBoxLayout(graph_panel)
-        title = QLabel("REAL-TIME DATALOG / DYNO TRACE")
+        title = QLabel("บันทึกข้อมูลเรียลไทม์ / กราฟ DYNO")
         title.setObjectName("sectionTitle")
         graph_layout.addWidget(title)
 
         self.plot = pg.PlotWidget()
         self.plot.setBackground("#02070D")
         self.plot.showGrid(x=True, y=True, alpha=0.22)
-        self.plot.setLabel("bottom", "ENGINE RPM", units="RPM")
-        self.plot.setLabel("left", "THROTTLE POSITION", units="%")
+        self.plot.setLabel("bottom", "รอบเครื่องยนต์", units="RPM")
+        self.plot.setLabel("left", "ตำแหน่งคันเร่ง", units="%")
         self.plot.setXRange(0, 13000, padding=0)
         self.plot.setYRange(0, 100, padding=0.03)
         self.plot.setMouseEnabled(x=True, y=True)
         self.curve = self.plot.plot([], [], pen=pg.mkPen("#FF3038", width=2))
         graph_layout.addWidget(self.plot, 1)
-        self.graph_status = QLabel("Ready — Mock Mode can run without a vehicle")
+        self.graph_status = QLabel("พร้อมใช้งาน — โหมดจำลองทำงานได้โดยไม่ต้องต่อรถ")
         self.graph_status.setObjectName("statusStrip")
         graph_layout.addWidget(self.graph_status)
         root.addWidget(graph_panel, 1)
@@ -43,7 +43,7 @@ class LoggerPage(QWidget):
         controls.setObjectName("panel")
         controls.setFixedWidth(220)
         ctl = QVBoxLayout(controls)
-        ctl.addWidget(QLabel("LIVE VALUES"), 0)
+        ctl.addWidget(QLabel("ค่าข้อมูลสด"), 0)
         self.rpm_card = QLabel("0\nRPM")
         self.rpm_card.setObjectName("valueCard")
         self.tps_card = QLabel("0.0\nTPS %")
@@ -53,11 +53,11 @@ class LoggerPage(QWidget):
         ctl.addWidget(self.rpm_card)
         ctl.addWidget(self.tps_card)
         ctl.addStretch(1)
-        self.run_btn = QPushButton("RUN")
+        self.run_btn = QPushButton("เริ่ม")
         self.run_btn.setCheckable(True)
         self.run_btn.setObjectName("primaryButton")
-        self.clear_btn = QPushButton("CLEAR")
-        self.play_btn = QPushButton("PLAY")
+        self.clear_btn = QPushButton("ล้างข้อมูล")
+        self.play_btn = QPushButton("เล่นย้อนหลัง")
         for b in (self.run_btn, self.clear_btn, self.play_btn):
             b.setMinimumHeight(52)
         self.run_btn.toggled.connect(self._run_changed)
@@ -79,7 +79,7 @@ class LoggerPage(QWidget):
         self._replay_timer.timeout.connect(self._replay_tick)
 
     def _run_changed(self, checked: bool) -> None:
-        self.run_btn.setText("STOP" if checked else "RUN")
+        self.run_btn.setText("หยุด" if checked else "เริ่ม")
         if checked:
             self.stop_replay()
         self.run_toggled.emit(checked)
@@ -115,18 +115,18 @@ class LoggerPage(QWidget):
         self.curve.setData([], [])
         self.rpm_card.setText("0\nRPM")
         self.tps_card.setText("0.0\nTPS %")
-        self.graph_status.setText("Trace cleared")
+        self.graph_status.setText("ล้างข้อมูลกราฟแล้ว")
 
     def start_replay(self) -> bool:
         if not self._recording:
-            self.graph_status.setText("No captured samples to replay")
+            self.graph_status.setText("ยังไม่มีข้อมูลที่บันทึกไว้สำหรับเล่นย้อนหลัง")
             return False
         self._replay_data = list(self._recording)
         self._replay_index = 0
         self._rpm.clear()
         self._tps.clear()
         self.curve.setData([], [])
-        self.graph_status.setText(f"Replay — {len(self._replay_data)} samples")
+        self.graph_status.setText(f"กำลังเล่นย้อนหลัง — {len(self._replay_data)} ตัวอย่าง")
         self._replay_timer.start()
         return True
 
@@ -137,7 +137,7 @@ class LoggerPage(QWidget):
     def _replay_tick(self) -> None:
         if self._replay_index >= len(self._replay_data):
             self.stop_replay()
-            self.graph_status.setText("Replay complete")
+            self.graph_status.setText("เล่นข้อมูลย้อนหลังเสร็จแล้ว")
             return
         rpm, tps = self._replay_data[self._replay_index]
         self._replay_index += 1
