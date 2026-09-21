@@ -80,6 +80,11 @@ def configure_qt_runtime(
     os.environ.pop("QT_PLUGIN_PATH", None)
     os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = str(platform_dir)
     os.environ["QT_QPA_PLATFORM"] = "windows"
+    # Prefer Windows' software renderer. This avoids native 0xC0000005 crashes
+    # caused by incompatible OpenGL/GPU drivers on workshop PCs.
+    os.environ.setdefault("QT_OPENGL", "software")
+    os.environ.setdefault("QT_QUICK_BACKEND", "software")
+    os.environ.setdefault("QT_ANGLE_PLATFORM", "warp")
 
     if bin_dir is not None:
         current_path = os.environ.get("PATH", "")

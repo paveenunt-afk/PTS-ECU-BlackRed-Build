@@ -13,6 +13,7 @@ except QtRuntimeError as exc:
     print(f"[PTS ECU] Qt runtime error: {exc}", file=sys.stderr)
     raise
 
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication
 
 from ui.main_window import MainWindow
@@ -33,6 +34,8 @@ def load_theme(app: QApplication) -> None:
 
 def main() -> int:
     configure_logging()
+    # Must be selected before QApplication is constructed.
+    QApplication.setAttribute(Qt.AA_UseSoftwareOpenGL, True)
     app = QApplication(sys.argv)
     app.setApplicationName("PTS ECU Tuning Suite")
     app.setOrganizationName("PTS")
