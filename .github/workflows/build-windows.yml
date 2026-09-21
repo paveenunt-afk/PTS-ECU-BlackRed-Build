@@ -42,10 +42,12 @@ jobs:
           & "${env:ProgramFiles(x86)}\NSIS\makensis.exe" installer.nsi
           if (-not (Test-Path "PTS_ECU_BlackRed_v10_Setup.exe")) { throw "Installer was not created" }
 
-      - name: Upload installer
+      - name: Upload installer and portable program
         uses: actions/upload-artifact@v4
         with:
-          name: PTS_ECU_BlackRed_v10_Setup
-          path: PTS_ECU_BlackRed_v10_Setup.exe
+          name: PTS_ECU_BlackRed_v10_Program_and_Setup
+          path: |
+            PTS_ECU_BlackRed_v10_Setup.exe
+            dist/PTS_ECU_BlackRed_v10.exe
           if-no-files-found: error
           retention-days: 7
