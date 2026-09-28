@@ -8,6 +8,8 @@ import hashlib
 import json
 import re
 import tkinter as tk
+import ctypes
+import sys
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
@@ -54,6 +56,39 @@ def identify_from_log(raw_text):
     return matches
 
 
+def detect_ftdi_d2xx():
+    """Ask FTDI's installed D2XX driver how many devices are available."""
+    if sys.platform != "win32":
+        raise RuntimeError("FTDI D2XX ใช้ได้บน Windows ในโปรแกรมนี้")
+    dll = ctypes.WinDLL("ftd2xx.dll")
+    dll.FT_CreateDeviceInfoList.argtypes = [ctypes.POINTER(ctypes.c_ulong)]
+    dll.FT_CreateDeviceInfoList.restype = ctypes.c_ulong
+    count = ctypes.c_ulong()
+    status = dll.FT_CreateDeviceInfoList(ctypes.byref(count))
+    if status:
+        raise RuntimeError(f"FTDI D2XX error {status}")
+    return count.value
+
+
+def detect_openport_j2534():
+    """Open and immediately close the installed Openport 2.0 J2534 device."""
+    if sys.platform != "win32":
+        raise RuntimeError("Openport J2534 ใช้ได้บน Windows ในโปรแกรมนี้")
+    dll = ctypes.WinDLL("op20pt32.dll")
+    dll.PassThruOpen.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_ulong)]
+    dll.PassThruOpen.restype = ctypes.c_long
+    dll.PassThruClose.argtypes = [ctypes.c_ulong]
+    dll.PassThruClose.restype = ctypes.c_long
+    device = ctypes.c_ulong()
+    status = dll.PassThruOpen(None, ctypes.byref(device))
+    if status:
+        raise RuntimeError(f"Openport J2534 error {status}")
+    try:
+        return device.value
+    finally:
+        dll.PassThruClose(device)
+
+
 def inspect_image(path):
     data = Path(path).read_bytes()
     sha = hashlib.sha256(data).hexdigest()
@@ -91,6 +126,12 @@ class Studio(tk.Tk):
             tk.Button(controls, text=label, command=fn, bg="#b51c2b", fg="white",
                       activebackground="#d52b3a", relief="flat", font=("Segoe UI", 11),
                       padx=13, pady=9).pack(side="left", padx=(0, 9))
+        interfaces = tk.Frame(self, bg="#111216")
+        interfaces.pack(fill="x", padx=20, pady=(0, 12))
+        for label, fn in (("ตรวจ FT232RL (D2XX)", self.ftdi),
+                          ("ตรวจ Openport 2.0 (J2534)", self.openport)):
+            tk.Button(interfaces, text=label, command=fn, bg="#343741", fg="white",
+                      relief="flat", font=("Segoe UI", 10), padx=10, pady=7).pack(side="left", padx=(0, 9))
         self.output = tk.Text(self, bg="#1c1e24", fg="#eeeeee", insertbackground="white",
                               font=("Consolas", 11), wrap="word", relief="flat")
         self.output.pack(fill="both", expand=True, padx=20, pady=(0, 20))
@@ -151,6 +192,20 @@ class Studio(tk.Tk):
                     ensure_ascii=False, indent=2))
             except (OSError, UnicodeError) as exc:
                 messagebox.showerror("อ่าน log ไม่สำเร็จ", str(exc))
+
+    def ftdi(self):
+        try:
+            count = detect_ftdi_d2xx()
+            self.show(f"FTDI D2XX: พบอุปกรณ์ {count} ตัว\nยังไม่ได้เชื่อมต่อ ECU หรือส่งคำสั่ง K-Line")
+        except (OSError, RuntimeError, AttributeError) as exc:
+            self.show(f"FTDI D2XX: {exc}")
+
+    def openport(self):
+        try:
+            device = detect_openport_j2534()
+            self.show(f"Openport J2534: เปิดและปิดอุปกรณ์ได้ (ID {device})\nยังไม่ได้เชื่อมต่อช่อง CAN หรือส่งคำสั่ง ECU")
+        except (OSError, RuntimeError, AttributeError) as exc:
+            self.show(f"Openport J2534: {exc}")
 
     def save_report(self):
         path = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text", "*.txt")])
