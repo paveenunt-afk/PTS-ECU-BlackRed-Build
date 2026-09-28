@@ -19,34 +19,91 @@ REFERENCE_HASH = "6d480eb5b1a4411f0b1f1d15e7292209047de48c9b665885e7da47762850b9
 
 # ECU identification values supplied by the user. These are catalog metadata,
 # not protocol commands and not evidence that a particular ECU can be flashed.
-CATALOG_TEXT = """01052A0D01|K3MF-T01|Giorno 125|256
-0106A70D01|K3MH-T71|Giorno 125 2026|256
-0104780D01|K2TA-T02|Lead 125 4V|256
-0103960D01|K12M-J61|Lead 125 2V|384
-0105950D01|K2TG-T21|Lead 125 4V|384
-0101990D01|K36F-T01|PCX 150|384
-0102180D01|K36S-T31|PCX 150|384
-0102990D01|K97F-T01|PCX 150|384
-0103D00D01|K1ZF-T01|PCX 160|384
-0103CF0D01|K1ZF-T11|PCX 160 ABS|384
-0105050D01|K1ZP-T51|PCX 160|384
-0105040D01|K1ZP-T71|PCX 160 ABS|384
-0105B30D01|K1ZT-TC1|PCX 160|384
-0105B40D01|K1ZT-TF1|PCX 160|384
-0101FF0D01|K20J-T21|Zoomer X|256
-0104F20D01|K2F-T91|Scoopy i|256
-0101830401|MGP-A92|CBR 1000 RR|256
-01031A0501|MKN-L32|CBR 650 R ABS|256
-01031A1801|MKN-U11|CBR 650 R|256
-01030A0D01|K60S-T71|Click 125|384
-0103070D01|K59K-T11|Click 150|384
-01037C0D01|K0WF-T01|ADV 150|384
-0101D00D01|K60F-T01|Click 125|384
-01046D0D01|K2SF-T01|Click 160|384
-01048E0D01|K0WM-TA1|ADV 160|384
-01048D0D01|K0WL-T01|ADV 160|384"""
-CATALOG = [dict(zip(("software_id", "family", "model", "size_kib"), line.split("|")))
-           for line in CATALOG_TEXT.splitlines()]
+CATALOG_TEXT = """0101610D01|K03-T61|เวฟ 110i|4000|9FEF|48|KEIHIN
+0100CE0D01|KWW-642|เวฟ 110i|4000|9FEF|48|KEIHIN
+0100CE0D02|KWW-643|เวฟ 110i|4000|9FEF|48|KEIHIN
+01010E0D01|KYZ-T03|เวฟ 110i|4000|9FEF|48|KEIHIN
+0101350101|K26-931|MSX 125|4000|9FEF|48|KEIHIN
+0101350501|K26-911|MSX 125|4000|9FEF|48|KEIHIN
+0101350D01|K26-901|MSX 125|4000|9FEF|48|KEIHIN
+0100DF0D02|KVB-S53|Click 110i|4000|9FEF|48|KEIHIN
+0101180D01|K16-901|สกุ๊ปปี้ i|4000|9FEF|48|KEIHIN
+0101850D01|K16-B01|สกุ๊ปปี้ i|4000|9FEF|48|KEIHIN
+0101270D01|K20-901|ซูมเมอร์-X|4000|9FEF|48|KEIHIN
+0100C50D02|KPP-T03|CBR 150R|0|DFEF|56|KEIHIN
+0100B80D01|KYJ-901|CBR 250R|0|DFEF|56|KEIHIN
+0100B20D01|KWW-601|เวฟ 110i|0|7FEF|56|KEIHIN
+0101110F01|KPP-602|CBR 150|0|DFEF|56|KEIHIN
+0100DB0D01|KYL-T01|เวฟ 125 บังลม|0|7FEF|56|KEIHIN
+0101880D01|K03-H01|เวฟ 110i|8000|0|64|KEIHIN
+01034C0D01|K58-TC2|เวฟ 110i|8000|0|64|KEIHIN
+0102B90D01|K58 T81|เวฟ 110i|8000|0|64|KEIHIN
+01040F0D01|K2J-T01|เวฟ 110i|8000|0|64|KEIHIN
+0105550D01|K2J TH1|เวฟ 110i|8000|0|64|KEIHIN
+01047B0D01|K3F-T01|เวฟ 125 ปลาวาฬ|8000|0|64|KEIHIN
+0103FA0D01|K1M-T01|ดรีม 110i|8000|0|64|KEIHIN
+0102580D01|K73-T32|เวฟ 125 ปลาวาฬ|8000|0|64|KEIHIN
+01033E0D01|K73-T61|เวฟ 125 ปลาวาฬ|8000|0|64|KEIHIN
+01034F1801|K73-TC2|เวฟ 125 ปลาวาฬ|8000|0|64|KEIHIN
+0102B50D01|K76-T62|ดรีม 110i|8000|0|64|KEIHIN
+0101BA0D01|KZV-A61|ดรีม 110i|8000|0|64|KEIHIN
+0101B30D01|KYZ-T41|เวฟ 125 ปลาวาฬ|8000|0|64|KEIHIN
+0103250F01|K54-NA1|CBR 150|8000|0|64|KEIHIN
+0101C60D01|K16-B61|สกุ๊ปปี้ i|8000|0|64|KEIHIN
+0103130F01|K15-601|CB 150R|8000|0|64|KEIHIN
+0102130D01|K26-B02|MSX 125 SF|8000|0|64|KEIHIN
+0102130501|K26-B13|MSX 125|8000|0|64|KEIHIN
+0103250D01|K45-TA1|CBR 150R|8000|0|64|KEIHIN
+0102A00D01|K94-T02|CB 150R|8000|0|96|KEIHIN
+0100C31501|KZZ-J01|CRF 250|8000|0|96|KEIHIN
+0102B70D02|K0A-T01|CB 650R|8000|0|96|KEIHIN
+0102CA0501|K0F-A01|Monkey 125|8000|0|96|KEIHIN
+0102CA0D01|K0F-T01|Monkey 125|8000|0|96|KEIHIN
+01041F0D01|K0F-T61|Monkey 125|8000|0|96|KEIHIN
+01030E0D01|K0G-902|ดรีม 125i|8000|0|96|KEIHIN
+0103F90D01|K2F-T02|CT 125 LED|8000|0|96|KEIHIN
+0104070D01|K1T-T01|CRF 300L|8000|0|96|KEIHIN
+0104070501|K1T-A11|CRF 300L|8000|0|96|KEIHIN
+0102360F01|KZZ-L41|CRF 250|8000|0|96|KEIHIN
+0102570601|K26-C01|MSX 125|8000|0|96|KEIHIN
+0103EB0D01|K26-G01|MSX GROM|8000|0|96|KEIHIN
+0102360F11|KZZJ-L41|CRF 250|8000|0|96|KEIHIN
+01015B0D01|KZZ-A22|CRF 250|E0000|B000|128|KEIHIN
+01011A0D02|KZZ-903|CRF 250L|E0000|B000|128|KEIHIN
+01011A0D01|KZZ-902|CRF 250L|E0000|B000|128|KEIHIN
+0101740D02|KZZ-914|CRF 250L|E0000|B000|128|KEIHIN
+01019E0D01|K33-951|CB 300F|E0000|E0000|128|KEIHIN
+01052A0D01|K3MF-T01|จีออโน่ 125|auto|auto|256|SHINDENGEN
+0104780D01|K2TA-T02|หลีด 125 4v|auto|auto|256|SHINDENGEN
+0101FF0D01|K20J-T21|ซูมเมอร์ X|auto|auto|256|SHINDENGEN
+0104F20D01|K2F-T91|สกุ๊ปปี้ i|auto|auto|256|SHINDENGEN
+0101830401|MGP-A92|CBR 1000 RR|auto|auto|256|SHINDENGEN
+01031A0501|MKN-L32|CBR 650 R ABS|auto|auto|256|SHINDENGEN
+01031A1801|MKN-U11|CBR 650 R|auto|auto|256|SHINDENGEN
+01030A0D01|K60S-T71|Click 125|auto|auto|384|SHINDENGEN
+0103070D01|K59K-T11|Click 150|auto|auto|384|SHINDENGEN
+01037C0D01|K0WF-T01|ADV 150|auto|auto|384|SHINDENGEN
+0101D00D01|K60F-T01|Click 125|auto|auto|384|SHINDENGEN
+0103960D01|K12M-J61|หลีด 125 2v|auto|auto|384|SHINDENGEN
+01046D0D01|K2SF-T01|Click 160|auto|auto|384|SHINDENGEN
+01048E0D01|K0WM-TA1|ADV 160|auto|auto|384|SHINDENGEN
+01048D0D01|K0WL-T01|ADV 160|auto|auto|384|SHINDENGEN
+0101990D01|K36F-T01|PCX 150|auto|auto|384|SHINDENGEN
+0103D00D01|K1ZF-T01|PCX 160|auto|auto|384|SHINDENGEN
+0103CF0D01|K1ZF-T11|PCX 160 ABS|auto|auto|384|SHINDENGEN
+0102180D01|K36S-T31|PCX 150|auto|auto|384|SHINDENGEN
+0102990D01|K97F-T01|PCX 150|auto|auto|384|SHINDENGEN
+0105050D01|K1ZP-T51|PCX 160|auto|auto|384|SHINDENGEN
+0105040D01|K1ZP-T71|PCX 160 ABS|auto|auto|384|SHINDENGEN
+0105950D01|K2TG-T21|หลีด 125 4v|auto|auto|384|SHINDENGEN
+0105B30D01|K1ZT-TC1|PCX 160|auto|auto|384|SHINDENGEN
+0105B40D01|K1ZT-TF1|PCX 160|auto|auto|384|SHINDENGEN
+0106270D01|K3F-T41|เวฟ 125 ปลาวาฬ|8000|0|64|KEIHIN
+0106280D01|K3F-T61|เวฟ 125 ปลาวาฬ|8000|0|96|KEIHIN
+01062C0D01|K2J-TQ1|Wave 110i 2026|8000|0|64|KEIHIN
+0106A70D01|K3MH-T71|GIORNO 125 2026|auto|auto|256|SHINDENGEN"""
+CATALOG = [dict(zip(("software_id", "family", "model", "start", "end", "size_kib", "maker"),
+                    line.split("|"))) for line in CATALOG_TEXT.splitlines()]
 THAI_KEYS = {
     "path": "ไฟล์", "size_bytes": "ขนาดไฟล์ (ไบต์)", "sha256": "รหัสตรวจสอบ SHA-256",
     "same_as_supplied_file": "ตรงกับไฟล์อ้างอิงที่ส่งมา", "markers": "ข้อความระบุซอฟต์แวร์",
@@ -57,6 +114,7 @@ THAI_KEYS = {
     "flash_read": "ดูดไฟล์จากกล่อง", "flash_write": "อัดไฟล์ลงกล่อง",
     "software_id": "รหัสซอฟต์แวร์", "family": "รหัสตระกูลกล่อง",
     "model": "รุ่นรถ", "size_kib": "ขนาดไฟล์ (กิโลไบต์)",
+    "start": "ค่าเริ่มต้นตามตาราง", "end": "ค่าสิ้นสุดตามตาราง", "maker": "ผู้ผลิตกล่อง",
 }
 
 
@@ -143,7 +201,8 @@ class Studio(tk.Tk):
                  bg="#111216", fg="#ff7777", font=("Segoe UI", 11, "bold")).pack(anchor="w", padx=20)
         controls = tk.Frame(self, bg="#111216")
         controls.pack(fill="x", padx=20, pady=18)
-        for label, fn in (("เปิดไฟล์กล่อง", self.open_first), ("เปรียบเทียบไฟล์", self.open_second),
+        for label, fn in (("รายการรหัสกล่อง", self.catalog),
+                          ("เปิดไฟล์กล่อง", self.open_first), ("เปรียบเทียบไฟล์", self.open_second),
                           ("อ่านรหัสจากบันทึก", self.open_log),
                           ("ค้นหาพอร์ต", self.ports), ("บันทึกรายงาน", self.save_report)):
             tk.Button(controls, text=label, command=fn, bg="#b51c2b", fg="white",
@@ -164,6 +223,12 @@ class Studio(tk.Tk):
     def show(self, text):
         self.output.delete("1.0", "end")
         self.output.insert("end", text)
+
+    def catalog(self):
+        self.show(f"รหัสที่ได้รับ {len(CATALOG)} รายการ\n\n" +
+                  "\n".join(f"{item['software_id']}  {item['family']}  {item['model']}  "
+                            f"{item['maker']}  {item['size_kib']} กิโลไบต์"
+                            for item in CATALOG))
 
     def open_first(self):
         path = filedialog.askopenfilename(title="เลือกไฟล์กล่อง", filetypes=[("ไฟล์ BIN", "*.bin"), ("ทุกไฟล์", "*")])
