@@ -105,45 +105,45 @@ def inspect_image(path):
 class Studio(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("PTS Honda Flash Studio | วิเคราะห์ไฟล์และอุปกรณ์")
+        self.title("PTS ฮอนด้าแฟลช | ตรวจไฟล์และอุปกรณ์")
         self.geometry("960x650")
         self.configure(bg="#111216")
         self.first = None
         self.second = None
         bar = tk.Frame(self, bg="#9f1624", height=62)
         bar.pack(fill="x")
-        tk.Label(bar, text="PTS  |  HONDA FLASH STUDIO", fg="white", bg="#9f1624",
+        tk.Label(bar, text="PTS  |  ฮอนด้าแฟลช", fg="white", bg="#9f1624",
                  font=("Segoe UI", 19, "bold")).pack(side="left", padx=22, pady=12)
-        tk.Label(self, text="โปรไฟล์ศึกษา: " + TARGET_PART + "  •  ขนาดไฟล์อ้างอิง 256 KiB",
+        tk.Label(self, text="รหัสไฟล์อ้างอิง: " + TARGET_PART + "  •  ขนาด 256 กิโลไบต์",
                  bg="#111216", fg="#eeeeee", font=("Segoe UI", 12)).pack(anchor="w", padx=20, pady=(16, 6))
-        tk.Label(self, text="สถานะ ECU: ยังไม่ยืนยัน  |  อ่านแฟลช: ยังไม่มี  |  เขียนแฟลช: ยังไม่มี",
+        tk.Label(self, text="สถานะกล่อง: ยังไม่เชื่อมต่อ  |  ดูดไฟล์: ยังไม่มี  |  อัดไฟล์: ยังไม่มี",
                  bg="#111216", fg="#ff7777", font=("Segoe UI", 11, "bold")).pack(anchor="w", padx=20)
         controls = tk.Frame(self, bg="#111216")
         controls.pack(fill="x", padx=20, pady=18)
-        for label, fn in (("เปิดไฟล์ BIN", self.open_first), ("เปรียบเทียบ BIN", self.open_second),
-                          ("ตรวจรหัส ECU จาก log", self.open_log),
+        for label, fn in (("เปิดไฟล์กล่อง", self.open_first), ("เปรียบเทียบไฟล์", self.open_second),
+                          ("อ่านรหัสจากบันทึก", self.open_log),
                           ("ค้นหาพอร์ต", self.ports), ("บันทึกรายงาน", self.save_report)):
             tk.Button(controls, text=label, command=fn, bg="#b51c2b", fg="white",
                       activebackground="#d52b3a", relief="flat", font=("Segoe UI", 11),
                       padx=13, pady=9).pack(side="left", padx=(0, 9))
         interfaces = tk.Frame(self, bg="#111216")
         interfaces.pack(fill="x", padx=20, pady=(0, 12))
-        for label, fn in (("ตรวจ FT232RL (D2XX)", self.ftdi),
-                          ("ตรวจ Openport 2.0 (J2534)", self.openport)):
+        for label, fn in (("ตรวจสาย K-Line FT232RL", self.ftdi),
+                          ("ตรวจสาย CAN Openport 2.0", self.openport)):
             tk.Button(interfaces, text=label, command=fn, bg="#343741", fg="white",
                       relief="flat", font=("Segoe UI", 10), padx=10, pady=7).pack(side="left", padx=(0, 9))
         self.output = tk.Text(self, bg="#1c1e24", fg="#eeeeee", insertbackground="white",
                               font=("Consolas", 11), wrap="word", relief="flat")
         self.output.pack(fill="both", expand=True, padx=20, pady=(0, 20))
-        self.show("เปิดไฟล์ BIN เพื่อดูขนาด SHA-256 และข้อความระบุซอฟต์แวร์ภายในไฟล์\n"
-                  "การค้นหาพอร์ตเป็นการแสดงรายการอุปกรณ์เท่านั้น ไม่ส่งข้อมูลไปยัง ECU")
+        self.show("เปิดไฟล์กล่องเพื่อดูขนาด รหัสตรวจสอบ SHA-256 และข้อความระบุซอฟต์แวร์\n"
+                  "การค้นหาพอร์ตแสดงรายการอุปกรณ์ ยังไม่ส่งข้อมูลไปยังกล่อง")
 
     def show(self, text):
         self.output.delete("1.0", "end")
         self.output.insert("end", text)
 
     def open_first(self):
-        path = filedialog.askopenfilename(title="เลือกไฟล์ BIN", filetypes=[("Binary", "*.bin"), ("All", "*")])
+        path = filedialog.askopenfilename(title="เลือกไฟล์กล่อง", filetypes=[("ไฟล์ BIN", "*.bin"), ("ทุกไฟล์", "*")])
         if path:
             try:
                 self.first = inspect_image(path)
@@ -154,7 +154,7 @@ class Studio(tk.Tk):
 
     def open_second(self):
         if not self.first:
-            messagebox.showinfo("เลือกไฟล์", "เปิดไฟล์ BIN ฉบับแรกก่อน")
+            messagebox.showinfo("เลือกไฟล์", "เปิดไฟล์กล่องฉบับแรกก่อน")
             return
         path = filedialog.askopenfilename(title="เลือกไฟล์เปรียบเทียบ")
         if path:
@@ -174,36 +174,36 @@ class Studio(tk.Tk):
         try:
             from serial.tools import list_ports
             ports = list(list_ports.comports())
-            self.show("พอร์ตที่พบ (ยังไม่ได้เชื่อมต่อ ECU):\n" +
+            self.show("พอร์ตที่พบ (ยังไม่ได้เชื่อมต่อกล่อง):\n" +
                       ("\n".join(f"{p.device} | {p.description} | VID:PID {p.vid}:{p.pid}" for p in ports)
                        if ports else "ไม่พบพอร์ต COM"))
         except ImportError:
             self.show("ต้องติดตั้ง pyserial เพื่อดูรายการพอร์ต COM")
 
     def open_log(self):
-        path = filedialog.askopenfilename(title="เลือก log คำตอบ ECU", filetypes=[("Logs", "*.txt *.log *.jsonl"), ("All", "*")])
+        path = filedialog.askopenfilename(title="เลือกบันทึกคำตอบกล่อง", filetypes=[("บันทึก", "*.txt *.log *.jsonl"), ("ทุกไฟล์", "*")])
         if path:
             try:
                 matches = identify_from_log(Path(path).read_text(encoding="utf-8"))
                 self.show(json.dumps({"source": path, "matches": matches,
                     "status": "พบรหัสตรงตารางผู้ใช้" if matches else "ไม่พบรหัสตรงตาราง",
-                    "note": "ต้องยืนยันว่าไบต์นี้มาจากคำตอบ ECU ไม่ใช่ TX/echo หรือข้อความใน log",
+                    "note": "รหัสนี้ต้องมาจากคำตอบกล่อง ไม่ใช่ข้อมูลที่ส่งออกหรือสัญญาณสะท้อน",
                     "flash_read": "NOT_IMPLEMENTED", "flash_write": "NOT_IMPLEMENTED"},
                     ensure_ascii=False, indent=2))
             except (OSError, UnicodeError) as exc:
-                messagebox.showerror("อ่าน log ไม่สำเร็จ", str(exc))
+                messagebox.showerror("อ่านบันทึกไม่สำเร็จ", str(exc))
 
     def ftdi(self):
         try:
             count = detect_ftdi_d2xx()
-            self.show(f"FTDI D2XX: พบอุปกรณ์ {count} ตัว\nยังไม่ได้เชื่อมต่อ ECU หรือส่งคำสั่ง K-Line")
+            self.show(f"สาย K-Line FT232RL: พบอุปกรณ์ {count} ตัว\nยังไม่ได้เชื่อมต่อกล่องหรือส่งคำสั่ง")
         except (OSError, RuntimeError, AttributeError) as exc:
             self.show(f"FTDI D2XX: {exc}")
 
     def openport(self):
         try:
             device = detect_openport_j2534()
-            self.show(f"Openport J2534: เปิดและปิดอุปกรณ์ได้ (ID {device})\nยังไม่ได้เชื่อมต่อช่อง CAN หรือส่งคำสั่ง ECU")
+            self.show(f"สาย CAN Openport 2.0: เปิดและปิดอุปกรณ์ได้ (รหัส {device})\nยังไม่ได้เชื่อมต่อช่อง CAN หรือส่งคำสั่งกล่อง")
         except (OSError, RuntimeError, AttributeError) as exc:
             self.show(f"Openport J2534: {exc}")
 
