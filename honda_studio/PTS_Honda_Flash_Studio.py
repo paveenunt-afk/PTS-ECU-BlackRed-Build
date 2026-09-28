@@ -47,6 +47,29 @@ CATALOG_TEXT = """01052A0D01|K3MF-T01|Giorno 125|256
 01048D0D01|K0WL-T01|ADV 160|384"""
 CATALOG = [dict(zip(("software_id", "family", "model", "size_kib"), line.split("|")))
            for line in CATALOG_TEXT.splitlines()]
+THAI_KEYS = {
+    "path": "ไฟล์", "size_bytes": "ขนาดไฟล์ (ไบต์)", "sha256": "รหัสตรวจสอบ SHA-256",
+    "same_as_supplied_file": "ตรงกับไฟล์อ้างอิงที่ส่งมา", "markers": "ข้อความระบุซอฟต์แวร์",
+    "ecu_identity": "หมายเลขกล่อง", "original": "ไฟล์ต้นฉบับ", "candidate": "ไฟล์เปรียบเทียบ",
+    "same_bytes": "ข้อมูลเหมือนกันทุกไบต์", "different_bytes": "จำนวนไบต์ที่ต่างกัน",
+    "flash_compatibility": "ความเข้ากันได้ในการอัดไฟล์", "source": "แหล่งบันทึก",
+    "matches": "รหัสที่พบ", "status": "สถานะ", "note": "หมายเหตุ",
+    "flash_read": "ดูดไฟล์จากกล่อง", "flash_write": "อัดไฟล์ลงกล่อง",
+    "software_id": "รหัสซอฟต์แวร์", "family": "รหัสตระกูลกล่อง",
+    "model": "รุ่นรถ", "size_kib": "ขนาดไฟล์ (กิโลไบต์)",
+}
+
+
+def thai_report(value):
+    if isinstance(value, dict):
+        return {THAI_KEYS.get(key, key): thai_report(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [thai_report(item) for item in value]
+    if value == "NOT_IMPLEMENTED":
+        return "ยังไม่มีฟังก์ชันนี้"
+    if value == "UNKNOWN: การเทียบไฟล์ไม่ยืนยันว่าอัดลง ECU ได้":
+        return "ยังไม่ทราบ: การเทียบไฟล์ไม่ยืนยันว่าอัดลงกล่องได้"
+    return value
 
 
 def identify_from_log(raw_text):
@@ -148,7 +171,7 @@ class Studio(tk.Tk):
             try:
                 self.first = inspect_image(path)
                 self.second = None
-                self.show(json.dumps(self.first, ensure_ascii=False, indent=2))
+                self.show(json.dumps(thai_report(self.first), ensure_ascii=False, indent=2))
             except OSError as exc:
                 messagebox.showerror("อ่านไฟล์ไม่สำเร็จ", str(exc))
 
@@ -166,7 +189,7 @@ class Studio(tk.Tk):
                 report = {"original": self.first, "candidate": self.second,
                           "same_bytes": a == b, "different_bytes": changes,
                           "flash_compatibility": "UNKNOWN: การเทียบไฟล์ไม่ยืนยันว่าอัดลง ECU ได้"}
-                self.show(json.dumps(report, ensure_ascii=False, indent=2))
+                self.show(json.dumps(thai_report(report), ensure_ascii=False, indent=2))
             except OSError as exc:
                 messagebox.showerror("เปรียบเทียบไม่สำเร็จ", str(exc))
 
@@ -185,10 +208,10 @@ class Studio(tk.Tk):
         if path:
             try:
                 matches = identify_from_log(Path(path).read_text(encoding="utf-8"))
-                self.show(json.dumps({"source": path, "matches": matches,
+                self.show(json.dumps(thai_report({"source": path, "matches": matches,
                     "status": "พบรหัสตรงตารางผู้ใช้" if matches else "ไม่พบรหัสตรงตาราง",
                     "note": "รหัสนี้ต้องมาจากคำตอบกล่อง ไม่ใช่ข้อมูลที่ส่งออกหรือสัญญาณสะท้อน",
-                    "flash_read": "NOT_IMPLEMENTED", "flash_write": "NOT_IMPLEMENTED"},
+                    "flash_read": "NOT_IMPLEMENTED", "flash_write": "NOT_IMPLEMENTED"}),
                     ensure_ascii=False, indent=2))
             except (OSError, UnicodeError) as exc:
                 messagebox.showerror("อ่านบันทึกไม่สำเร็จ", str(exc))
