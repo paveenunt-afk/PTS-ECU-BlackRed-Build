@@ -225,10 +225,35 @@ class Studio(tk.Tk):
         self.output.insert("end", text)
 
     def catalog(self):
-        self.show(f"รหัสที่ได้รับ {len(CATALOG)} รายการ\n\n" +
-                  "\n".join(f"{item['software_id']}  {item['family']}  {item['model']}  "
-                            f"{item['maker']}  {item['size_kib']} กิโลไบต์"
-                            for item in CATALOG))
+        window = tk.Toplevel(self)
+        window.title("ตารางรหัส ECU ที่ผู้ใช้ให้")
+        window.geometry("1050x560")
+        window.configure(bg="#111216")
+        query = tk.StringVar()
+        tk.Label(window, text="ค้นหารหัสซอฟต์แวร์ รุ่นรถ หรือผู้ผลิต", bg="#111216",
+                 fg="white", font=("Segoe UI", 11)).pack(anchor="w", padx=14, pady=(12, 4))
+        entry = tk.Entry(window, textvariable=query, font=("Segoe UI", 12))
+        entry.pack(fill="x", padx=14, pady=(0, 10))
+        columns = ("software_id", "family", "model", "start", "end", "size_kib", "maker")
+        table = ttk.Treeview(window, columns=columns, show="headings")
+        for key, width in zip(columns, (140, 135, 210, 90, 90, 110, 130)):
+            table.heading(key, text=THAI_KEYS[key])
+            table.column(key, width=width, anchor="center")
+        scroll = ttk.Scrollbar(window, orient="vertical", command=table.yview)
+        table.configure(yscrollcommand=scroll.set)
+        scroll.pack(side="right", fill="y")
+        table.pack(fill="both", expand=True, padx=(14, 0), pady=(0, 14))
+
+        def refresh(*_):
+            table.delete(*table.get_children())
+            term = query.get().strip().casefold()
+            for item in CATALOG:
+                if term in " ".join(item.values()).casefold():
+                    table.insert("", "end", values=tuple(item[key] for key in columns))
+
+        query.trace_add("write", refresh)
+        refresh()
+        entry.focus_set()
 
     def open_first(self):
         path = filedialog.askopenfilename(title="เลือกไฟล์กล่อง", filetypes=[("ไฟล์ BIN", "*.bin"), ("ทุกไฟล์", "*")])
