@@ -1,0 +1,13 @@
+PTS BIN & Flash 2.0 is provided under GPL-3.0; full license: vendor/LICENSE.
+Protocol implementation: https://github.com/roccofz1/HondaECU
+Upstream file blob SHA: 7683386bb2bb697cff20174ccfb6c58239556e7c
+Upstream source: vendor/HondaECU.py
+Modification: Python 3 bytearray access for write response length.
+flash_engine.py wraps the upstream with exact echo comparison, bounded frame lengths,
+timeouts, exact read sizes, exclusive backup files, ROM checksum validation,
+MEN-E21 reference matching, and mandatory full readback comparison.
+No automatic recovery fallback or automatic checksum modification.
+A valid frame checksum does not prove an ACK is semantically positive.
+The upstream does not document complete status semantics; this is experimental.
+Firmware and XDF files: user-supplied archive, copied byte-for-byte.
+No claim that every supplied firmware is factory stock or compatible with an ECU.
