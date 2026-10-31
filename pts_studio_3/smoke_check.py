@@ -10,4 +10,4 @@ p=subprocess.run(command,env=env,timeout=60)
 if p.returncode:raise RuntimeError(f'GUI process failed: {p.returncode}')
 report=json.loads(out.read_text(encoding='utf-8'))
 assert report['success'] and report['cells']==256 and report['graph_window'],report
-print(json.dumps(report,ensure_ascii=False))
+print(json.dumps(report,ensure_ascii=True))

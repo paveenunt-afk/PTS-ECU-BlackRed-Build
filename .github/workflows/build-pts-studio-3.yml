@@ -12,6 +12,8 @@ jobs:
   windows:
     runs-on: windows-latest
     timeout-minutes: 20
+    env:
+      PYTHONUTF8: '1'
     defaults:
       run:
         working-directory: pts_studio_3
@@ -22,7 +24,7 @@ jobs:
           python-version: '3.12'
           architecture: x64
       - name: Install build tools
-        run: python -m pip install pyinstaller pillow
+        run: python -m pip install pyinstaller==6.22.3 pillow==13.0.0
       - name: Generate PTS icons
         run: python branding.py
       - name: Test binary engine
