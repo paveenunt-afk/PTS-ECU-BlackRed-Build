@@ -1,0 +1,55 @@
+<?xml version='1.0' encoding='utf-8'?>
+<XDFFORMAT version="1.60">
+  <XDFHEADER>
+    <deftitle>PTS ตัวอย่างสังเคราะห์</deftitle>
+    <BASEOFFSET offset="0" subtract="0" />
+  </XDFHEADER>
+  <XDFTABLE uniqueid="0x1">
+    <title>ตัวอย่างสังเคราะห์ — ฝึกแก้ไขเท่านั้น</title>
+    <XDFAXIS id="x">
+      <indexcount>16</indexcount>
+      <LABEL index="0" value="500.0" />
+      <LABEL index="1" value="1000.0" />
+      <LABEL index="2" value="1500.0" />
+      <LABEL index="3" value="2000.0" />
+      <LABEL index="4" value="2500.0" />
+      <LABEL index="5" value="3000.0" />
+      <LABEL index="6" value="3500.0" />
+      <LABEL index="7" value="4000.0" />
+      <LABEL index="8" value="4500.0" />
+      <LABEL index="9" value="5000.0" />
+      <LABEL index="10" value="5500.0" />
+      <LABEL index="11" value="6000.0" />
+      <LABEL index="12" value="6500.0" />
+      <LABEL index="13" value="7000.0" />
+      <LABEL index="14" value="7500.0" />
+      <LABEL index="15" value="8000.0" />
+    </XDFAXIS>
+    <XDFAXIS id="y">
+      <indexcount>16</indexcount>
+      <LABEL index="0" value="0.0" />
+      <LABEL index="1" value="10.0" />
+      <LABEL index="2" value="20.0" />
+      <LABEL index="3" value="30.0" />
+      <LABEL index="4" value="40.0" />
+      <LABEL index="5" value="50.0" />
+      <LABEL index="6" value="60.0" />
+      <LABEL index="7" value="70.0" />
+      <LABEL index="8" value="80.0" />
+      <LABEL index="9" value="90.0" />
+      <LABEL index="10" value="100.0" />
+      <LABEL index="11" value="110.0" />
+      <LABEL index="12" value="120.0" />
+      <LABEL index="13" value="130.0" />
+      <LABEL index="14" value="140.0" />
+      <LABEL index="15" value="150.0" />
+    </XDFAXIS>
+    <XDFAXIS id="z">
+      <EMBEDDEDDATA mmedaddress="0x400" mmedtypeflags="0x02" mmedelementsizebits="16" mmedrowcount="16" mmedcolcount="16" mmedmajorstridebits="0" mmedminorstridebits="0" />
+      <units>หน่วยตัวอย่าง</units>
+      <MATH equation="X/100">
+        <VAR id="X" />
+      </MATH>
+    </XDFAXIS>
+  </XDFTABLE>
+</XDFFORMAT>

@@ -1,0 +1,7 @@
+XDF interoperability research references (source code in this package is independently written):
+https://www.tunerpro.net/forum/viewtopic.php?t=6013
+https://github.com/bri3d/a2l2xdf
+https://github.com/KingAiCodeForge/TunerPro-XDF-BIN-Universal-Exporter
+
+This implementation deliberately accepts zero-stride direct-address layouts only. Unsupported records are reported.
+No proprietary binaries, manufacturer plug-ins, maps, or ECU firmware are included. demo.bin is synthetic.

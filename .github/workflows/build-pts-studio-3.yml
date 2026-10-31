@@ -1,0 +1,49 @@
+name: Build PTS Studio 3 BlackRed EXE
+on:
+  push:
+    branches: [pts-studio-3-windows-icons]
+    paths:
+      - 'pts_studio_3/**'
+      - '.github/workflows/build-pts-studio-3.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: pts_studio_3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - name: Install build tools
+        run: python -m pip install pyinstaller pillow
+      - name: Generate PTS icons
+        run: python branding.py
+      - name: Test binary engine
+        run: python -m unittest discover -v
+      - name: Test source GUI
+        run: python smoke_check.py
+      - name: Build Windows EXE
+        run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name PTS_Studio_3 --icon assets/pts.ico --add-data "assets;assets" --add-data "README_TH.txt;." --hidden-import PIL.ImageGrab app.pyw
+      - name: Test compiled EXE
+        run: python smoke_check.py dist/PTS_Studio_3.exe
+      - name: Hash EXE
+        shell: pwsh
+        run: (Get-FileHash dist/PTS_Studio_3.exe -Algorithm SHA256).Hash | Set-Content dist/SHA256.txt
+      - name: Upload EXE and tests
+        uses: actions/upload-artifact@v4
+        with:
+          name: PTS_Studio_3_Windows_x64_BlackRed
+          path: |
+            pts_studio_3/dist/PTS_Studio_3.exe
+            pts_studio_3/dist/SHA256.txt
+            pts_studio_3/smoke_report.json
+            pts_studio_3/README_TH.txt
+          if-no-files-found: error
+          retention-days: 30
