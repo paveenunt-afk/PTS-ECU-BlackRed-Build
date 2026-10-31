@@ -12,22 +12,35 @@ def integer(v,default=0):
     if v is None or str(v).strip()=='':return default
     s=str(v).strip();return int(s,16) if s.lower().startswith(('0x','-0x')) else int(s,10)
 
-def read_xml(raw):
+def decode_xdf(raw,encoding='auto'):
     if len(raw)>16*1024*1024:raise ValueError('XDF ใหญ่เกิน 16 MB')
-    if raw.startswith((b'\xff\xfe',b'\xfe\xff')):text=raw.decode('utf-16')
-    else:
-        declared=re.search(br'<\?xml[^>]*encoding=[\'"]([^\'"]+)',raw[:300],re.I)
-        enc=declared.group(1).decode('ascii') if declared else 'utf-8-sig'
-        try:text=raw.decode(enc)
-        except UnicodeDecodeError:
-            if declared:raise ValueError('รหัสอักขระ XDF ไม่ตรงกับที่ประกาศ')
-            text=raw.decode('cp1252')
+    declared=re.search(br'<\?xml[^>]*encoding=[\'"]([^\'"]+)',raw[:300],re.I)
+    declared=declared.group(1).decode('ascii','replace') if declared else None
+    if encoding!='auto':candidates=[encoding]
+    elif raw.startswith((b'\xff\xfe',b'\xfe\xff')):candidates=['utf-16']
+    elif raw.startswith(b'<\x00'):candidates=['utf-16-le']
+    elif raw.startswith(b'\x00<'):candidates=['utf-16-be']
+    else:candidates=list(dict.fromkeys(([declared] if declared else [])+['utf-8-sig','cp874','cp1252']))
+    for enc in candidates:
+        try:
+            text=raw.decode(enc)
+            return text,enc,0
+        except (UnicodeDecodeError,LookupError):pass
+    # Windows ANSI files can contain undefined single-byte values in labels.
+    # Keep a visible replacement marker rather than crashing or dropping bytes.
+    single=[enc for enc in candidates if enc and enc.lower().replace('-','') in ('cp874','windows874','cp1252','windows1252','latin1','iso88591')]
+    if not single:raise ValueError('ถอดรหัส XDF ไม่สำเร็จ ลองเลือก Windows-874 หรือ Windows-1252')
+    enc=single[0];text=raw.decode(enc,errors='replace');return text,enc,text.count('\ufffd')
+
+def read_xml(raw,encoding='auto',with_info=False):
+    text,used,replaced=decode_xdf(raw,encoding)
     if '<!DOCTYPE' in text.upper() or '<!ENTITY' in text.upper():raise ValueError('ไม่รองรับ DTD หรือ entity ภายนอกใน XDF')
     text=re.sub(r'(<\?xml[^>]*encoding=)[\'"][^\'"]+[\'"]',r'\1"utf-8"',text,count=1,flags=re.I)
-    root=ET.fromstring(text)
+    try:root=ET.fromstring(text)
+    except ET.ParseError as exc:raise ValueError('XDF ไม่ใช่ XML ที่อ่านได้ หรือเป็น XDF รุ่นเก่าแบบอื่น: '+str(exc)) from exc
     for el in root.iter():el.tag=el.tag.rsplit('}',1)[-1]
     if root.tag!='XDFFORMAT':raise ValueError('รองรับ XDF แบบ XML XDFFORMAT เท่านั้น')
-    return root
+    return (root,used,replaced) if with_info else root
 
 def equation(node):
     maths=node.findall('MATH')
@@ -45,17 +58,17 @@ def storage(mem,defaults,base):
     if flags is None:
         flags=(2 if integer(defaults.get('lsbfirst'),1) else 0)|(1 if integer(defaults.get('signed')) else 0)|(0x10000 if integer(defaults.get('float')) else 0)
     if flags&~0x10007:raise ValueError('ธงชนิดข้อมูล XDF นี้ยังไม่รองรับ')
-    for key in ('mmedmajorstridebits','mmedminorstridebits'):
-        if integer(mem.get(key))!=0:raise ValueError('รุ่นนี้รับ XDF ที่ stride เป็น 0 เท่านั้น')
     bits=integer(mem.get('mmedelementsizebits'),integer(defaults.get('datasizeinbits'),8))
+    major=integer(mem.get('mmedmajorstridebits'));minor=integer(mem.get('mmedminorstridebits'))
+    if major not in (0,bits) or minor!=0:raise ValueError('ยังไม่รองรับ stride แบบเว้นช่วงของรายการนี้')
     return dict(address=integer(mem.get('mmedaddress'))+base,bits=bits,endian='little' if flags&2 else 'big',signed=bool(flags&1),layout='column' if flags&4 else 'row',data_type='float' if flags&0x10000 else 'integer')
 
-def import_xdf(path,doc):
+def import_xdf(path,doc,encoding='auto'):
     if Path(path).stat().st_size>16*1024*1024:raise ValueError('XDF ใหญ่เกิน 16 MB')
-    return parse_xdf(Path(path).read_bytes(),doc)
+    return parse_xdf(Path(path).read_bytes(),doc,encoding)
 
-def parse_xdf(raw,doc):
-    root=read_xml(raw);header=root.find('XDFHEADER');defaults={};base=0;categories={};warnings=[];accepted=[];report=[]
+def parse_xdf(raw,doc,encoding='auto'):
+    root,used,replaced=read_xml(raw,encoding,True);header=root.find('XDFHEADER');defaults={};base=0;categories={};warnings=[];accepted=[];report=[]
     if header is not None:
         d=header.find('DEFAULTS');defaults=dict(d.attrib) if d is not None else {}
         b=header.find('BASEOFFSET')
@@ -83,7 +96,8 @@ def parse_xdf(raw,doc):
             z=axes.get('z') if node.tag=='XDFTABLE' else node
             if z is None:raise ValueError('ไม่มีแกนค่า Z')
             mem=z.find('EMBEDDEDDATA');m=storage(mem,defaults,base)
-            rows=integer(mem.get('mmedrowcount'),1);cols=integer(mem.get('mmedcolcount'),1)
+            x=axes.get('x');y=axes.get('y')
+            rows=integer(mem.get('mmedrowcount'),integer(y.findtext('indexcount'),1) if y is not None else 1);cols=integer(mem.get('mmedcolcount'),integer(x.findtext('indexcount'),1) if x is not None else 1)
             if node.tag=='XDFCONSTANT':rows=cols=1
             for axis,key in [('x','cols'),('y','rows')]:
                 ax=axes.get(axis)
@@ -104,4 +118,6 @@ def parse_xdf(raw,doc):
             m=spec(m,doc);display_values(doc,m);accepted.append(m);report.append('รับแล้ว: '+title+(' [อ่านอย่างเดียว]' if m.get('read_only') else '')+''.join('\n  '+n for n in notes))
         except (ValueError,TypeError,OverflowError,KeyError,SyntaxError,ET.ParseError) as exc:report.append('ข้าม: '+title+' — '+str(exc))
     if not report:raise ValueError('ไม่พบตารางหรือค่าคงที่ใน XDF')
-    return accepted,report
+    info=f'รหัสอักขระ: {used}'
+    if replaced:info+=f' • อักขระในข้อความที่อ่านไม่ได้แทนด้วย � จำนวน {replaced} ตัว กรุณาตรวจชื่อและคำอธิบาย หรือเลือกรหัสอักขระเอง'
+    return accepted,report+[info]

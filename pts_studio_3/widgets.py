@@ -60,7 +60,7 @@ class HeatGrid(ttk.Frame):
     def all(self):self.selected=set(range(len(self.values)));self.anchor=0;self.queue();self.onselect()
     def draw(self):
         self.pending=None;c=self.canvas;c.delete('all');t=self.theme;c.configure(bg=t['bg'])
-        if not self.spec or not self.values:c.create_text(35,45,anchor='nw',text='เปิดไฟล์ BIN หรือตัวอย่าง เพื่อเริ่มแก้ไขตาราง',fill=t['muted'],font=('Tahoma',14));return
+        if not self.spec or not self.values:c.create_text(35,45,anchor='nw',text='เปิด BIN แล้วเลือก XDF เพื่ออ่านรายการแมปและตาราง',fill=t['muted'],font=('Tahoma',14));return
         rows=self.spec['rows'];cols=self.spec['cols'];c.configure(scrollregion=(0,0,65+cols*self.cw,36+rows*self.ch))
         left=c.canvasx(0);top=c.canvasy(0);width=c.winfo_width();height=c.winfo_height();c0=max(0,int((left-65)//self.cw));c1=min(cols,int((left+width-65)//self.cw)+2);r0=max(0,int((top-36)//self.ch));r1=min(rows,int((top+height-36)//self.ch)+2);lo=min(self.values);span=max(self.values)-lo or 1
         for col in range(c0,c1):

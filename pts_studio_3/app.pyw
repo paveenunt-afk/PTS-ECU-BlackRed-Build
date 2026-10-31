@@ -21,8 +21,8 @@ CONFIG=Path(os.environ.get('APPDATA',str(Path.home())))/'PTS_Studio_3'/'settings
 
 class Studio(tk.Tk):
     def __init__(self):
-        super().__init__();self.title('PTS STUDIO 3.0 | ห้องทำงานแมป ECU');self.geometry('1440x900');self.minsize(980,650)
-        self.doc=Document();self.source=None;self.project=None;self.maps=[];self.versions=[];self.current=None;self.project_dirty=False;self.saved_state=b'';self.reference=None;self.popup=None;self.popgraph=None;self.sidebar_visible=True;self.full=False;self.focus_mode=False;self.settings={}
+        super().__init__();self.title('PTS STUDIO 3.1 | ห้องทำงานแมป ECU');self.geometry('1440x900');self.minsize(980,650)
+        self.doc=Document();self.xdf_path=None;self.xdf_encodings={'อัตโนมัติ':'auto','Windows-874 (ไทย)':'cp874','Windows-1252':'cp1252','UTF-8':'utf-8-sig','UTF-16':'utf-16','Latin-1':'latin-1'};self.source=None;self.project=None;self.maps=[];self.versions=[];self.current=None;self.project_dirty=False;self.saved_state=b'';self.reference=None;self.popup=None;self.popgraph=None;self.sidebar_visible=True;self.full=False;self.focus_mode=False;self.settings={}
         try:self.settings=json.loads(CONFIG.read_text(encoding='utf-8'))
         except (OSError,ValueError):pass
         self.theme_name=self.settings.get('theme','ดำ–แดง')
@@ -59,6 +59,7 @@ class Studio(tk.Tk):
         self.work=ttk.Frame(self.body);self.body.add(self.work,weight=6)
         self.map_title=tk.StringVar(value='พื้นที่ตาราง');ttk.Label(self.work,textvariable=self.map_title,font=('Tahoma',14,'bold')).pack(anchor='w',padx=6,pady=(5,2))
         self.map_details=tk.StringVar(value='เปิด BIN หรือเมนู ไฟล์ → เปิดตัวอย่างฝึกใช้งาน');ttk.Label(self.work,textvariable=self.map_details,style='Muted.TLabel').pack(anchor='w',padx=6,pady=(0,5))
+        xdfbar=ttk.Frame(self.work);xdfbar.pack(fill='x',padx=6,pady=3);self.xdf_label=tk.StringVar(value='XDF: ยังไม่ได้เลือก');ttk.Label(xdfbar,textvariable=self.xdf_label,style='Muted.TLabel').pack(side='left');ttk.Label(xdfbar,text='รหัสอักขระ XDF:').pack(side='right');self.xdf_encoding_var=tk.StringVar(value='อัตโนมัติ');enc=ttk.Combobox(xdfbar,textvariable=self.xdf_encoding_var,values=tuple(self.xdf_encodings),state='readonly',width=20);enc.pack(side='right',padx=8);enc.bind('<<ComboboxSelected>>',lambda e:self.safe(lambda:self.load_xdf(self.xdf_path) if self.xdf_path and self.doc.data else None))
         self.editbar=ttk.Frame(self.work);self.editbar.pack(fill='x')
         for text,fn in [('กำหนดค่า',self.edit_selected),('บวก/ลบ',lambda:self.math_edit('add')),('เปอร์เซ็นต์',lambda:self.math_edit('percent')),('ไล่ค่า →',lambda:self.interpolate_ui('x')),('ไล่ค่า ↓',lambda:self.interpolate_ui('y')),('ปรับผิว',self.smooth_ui),('คัดลอก',self.copy_cells),('วาง',self.paste_cells)]:self.button(self.editbar,text,fn)
         self.tabs=ttk.Notebook(self.work);self.tabs.pack(fill='both',expand=True,pady=5)
@@ -100,14 +101,14 @@ class Studio(tk.Tk):
         path=fd.askopenfilename(title='เปิดไฟล์ BIN',filetypes=[('ไฟล์ BIN','*.bin'),('ทุกไฟล์','*.*')])
         if not path:return
         doc=Document(checked_bytes(path));self.new_document(doc,Path(path))
+        if self.xdf_path:self.load_xdf(self.xdf_path)
     def new_document(self,doc,path,maps=None,versions=None):
         self.doc=doc;self.source=path;self.project=None;self.reference=None;self.versions=versions or [];self.project_dirty=False;self.saved_state=bytes(doc.data);self.maps=maps or [];self.current=None;self.grid.selected=set()
         if self.maps:self.current=self.maps[0]
-        else:
-            bits=16 if len(doc.data)>=2 else 8;words=len(doc.data)//(bits//8);cols=min(16,words);rows=min(16,words//cols);self.current=spec(dict(name='พื้นที่ค่าดิบ',address=0,rows=rows,cols=cols,bits=bits),doc)
         self.refresh_maps();self.render()
     def demo(self):
         if not self.confirm_discard():return
+        self.xdf_path=None
         raw=bytearray(16384)
         for r in range(16):
             for c in range(16):
@@ -119,7 +120,12 @@ class Studio(tk.Tk):
     def choose_map(self,e):
         if self.maplist.curselection():self.current=self.visible[self.maplist.curselection()[0]];self.grid.selected=set();self.grid.anchor=None;self.safe(self.render)
     def render(self):
-        if not self.current:return
+        if not self.current:
+            self.map_title.set('รออ่านแมปจาก XDF');self.map_details.set('เปิด BIN แล้วเลือก XDF ที่ตรงกับไฟล์ เพื่อแสดงตารางตามนิยาม');self.xdf_label.set('XDF: '+(Path(self.xdf_path).name if self.xdf_path else 'ยังไม่ได้เลือก'));self.grid.set_data([],None)
+            for graph in (self.g2,self.g3,self.popgraph):
+                if graph and graph.winfo_exists():graph.set_data([],None)
+            self.hex.config(state='normal');self.hex.delete('1.0','end');self.hex.config(state='disabled');self.file_label.set((self.source.name if self.source else 'ยังไม่ได้เลือก BIN')+f'   {len(self.doc.data):,} ไบต์');self.status.set('ยังไม่แสดงตารางจนกว่าจะอ่านนิยามแมปจาก XDF');return
+        self.xdf_label.set('XDF: '+(Path(self.xdf_path).name if self.xdf_path else 'นิยามตัวอย่าง / โครงการ'))
         m=self.current;vals=display_values(self.doc,m);raw=raw_values(self.doc,m);reference=Document(self.reference if self.reference is not None else self.doc.original);changed=set()
         try:other=raw_values(reference,m);changed={i for i,(a,b) in enumerate(zip(raw,other)) if a!=b}
         except ValueError:pass
@@ -238,7 +244,7 @@ class Studio(tk.Tk):
         if not self.confirm_discard():return
         path=fd.askopenfilename(title='เปิดโครงการ PTS 3',filetypes=[('โครงการ PTS','*.pts3 *.pts2')])
         if path:
-            doc,maps,versions=load_project(path);self.new_document(doc,None,maps,versions);self.project=Path(path);self.saved_state=bytes(doc.data);self.render()
+            doc,maps,versions=load_project(path);self.xdf_path=None;self.new_document(doc,None,maps,versions);self.project=Path(path);self.saved_state=bytes(doc.data);self.render()
     def snapshot(self):
         if not self.doc.data:raise ValueError('เปิดไฟล์ก่อน')
         if len(self.versions)>=5:raise ValueError('เก็บได้ 5 เวอร์ชันต่อโครงการในรุ่นนี้')
@@ -300,13 +306,18 @@ class Studio(tk.Tk):
         self.popup=tk.Toplevel(self);self.popup.title('PTS | กราฟพื้นผิว 3D');self.install_app_icon(self.popup);self.popup.geometry('1000x720');self.popgraph=Graph(self.popup,self.theme,'3d');self.popgraph.pack(fill='both',expand=True);self.popup.bind('<Escape>',lambda e:self.popup.destroy())
         if self.current:self.popgraph.set_data(display_values(self.doc,self.current),self.current)
     def import_xdf_ui(self):
-        if not self.doc.data:raise ValueError('เปิด BIN ก่อนนำเข้า XDF')
-        path=fd.askopenfilename(title='นำเข้า XDF แบบ XML',filetypes=[('XDF','*.xdf'),('ทุกไฟล์','*.*')])
+        path=fd.askopenfilename(title='เลือก XDF เพื่ออ่านรายการแมป',filetypes=[('XDF','*.xdf'),('ทุกไฟล์','*.*')])
         if not path:return
-        maps,report=import_xdf(path,self.doc)
-        if maps:
-            self.maps.extend(maps);self.current=maps[0];self.grid.selected=set();self.project_dirty=True;self.refresh_maps();self.render()
-        self.text_window('รายงานนำเข้า XDF',f'นำเข้าได้ {len(maps)} รายการ\nไม่แก้ไบต์ BIN ระหว่างนำเข้า\n\n'+'\n\n'.join(report))
+        if not self.doc.data:
+            self.status.set('เลือกไฟล์ BIN ที่ตรงกับ XDF นี้');self.open_bin()
+        if not self.doc.data:return
+        self.load_xdf(path)
+    def load_xdf(self,path,show_report=True):
+        encoding=self.xdf_encodings[self.xdf_encoding_var.get()];maps,report=import_xdf(path,self.doc,encoding)
+        self.xdf_path=str(path);self.maps=maps;self.current=maps[0] if maps else None;self.query.set('');self.grid.selected=set();self.grid.anchor=None;self.project_dirty=True;self.refresh_maps();self.render()
+        if maps:self.maplist.selection_set(0);self.maplist.activate(0);self.tabs.select(0)
+        if show_report:self.text_window('รายงานอ่าน XDF',f'อ่านได้ {len(maps)} รายการจาก {Path(path).name}\nตำแหน่ง ขนาด แกน และสูตรอ่านจาก XDF ไม่แก้ไบต์ BIN ระหว่างอ่าน\n\n'+'\n\n'.join(report))
+        return report
     def equation_dialog(self):
         if not self.current:raise ValueError('เลือกแมปก่อน')
         m=self.current;win=tk.Toplevel(self);win.title('สูตรแสดงค่า / สูตรแปลงกลับ');win.transient(self);win.grab_set();frame=ttk.Frame(win,padding=20);frame.pack(fill='both',expand=True)
@@ -372,7 +383,7 @@ class Studio(tk.Tk):
     def text_window(self,title,text):
         win=tk.Toplevel(self);win.title(title);win.geometry('850x620');box=tk.Text(win,wrap='word',font=('Tahoma',11),padx=20,pady=20,bg=self.theme['bg'],fg=self.theme['fg']);box.pack(fill='both',expand=True);box.insert('end',text);box.config(state='disabled');win.bind('<Escape>',lambda e:win.destroy())
 
-HELP='''เพิ่มในรุ่น 3: นำเข้า XDF XML แบบ stride=0, ตารางและค่าคงที่, integer/float32, row/column-major, สูตรคณิตศาสตร์และสูตรกลับ, อ่านแกน BIN แบบตรงหรือ LABEL, แก้ HEX, ส่งออก/นำเข้าแพตช์ SHA-256 และรายงาน diff CSV\nนำเข้า XDF มีรายงานสิ่งที่ข้าม ไม่ได้รองรับ XDF ทุกแบบ แกนอ้างอิงที่ยังไม่รองรับแสดงเป็นหมายเลขช่องพร้อมรายงาน\n\nPTS STUDIO 3.0 — โปรแกรมแก้ไขไฟล์ที่พัฒนาขึ้นใหม่
+HELP='''เพิ่มในรุ่น 3: นำเข้า XDF XML แบบ stride=0, ตารางและค่าคงที่, integer/float32, row/column-major, สูตรคณิตศาสตร์และสูตรกลับ, อ่านแกน BIN แบบตรงหรือ LABEL, แก้ HEX, ส่งออก/นำเข้าแพตช์ SHA-256 และรายงาน diff CSV\nนำเข้า XDF มีรายงานสิ่งที่ข้าม ไม่ได้รองรับ XDF ทุกแบบ แกนอ้างอิงที่ยังไม่รองรับแสดงเป็นหมายเลขช่องพร้อมรายงาน\n\nPTS STUDIO 3.1 — โปรแกรมแก้ไขไฟล์ที่พัฒนาขึ้นใหม่
 
 เริ่มต้น: ไฟล์ → เปิดตัวอย่างฝึกใช้งาน เพื่อทดลองได้โดยไม่ใช้ BIN ของรถ
 เปิด BIN แล้วสร้างนิยามแมป โดยระบุ HEX / ขนาด / บิต / ลำดับไบต์ให้ตรงกับไฟล์
@@ -414,8 +425,14 @@ if __name__=='__main__':
             import traceback
             report={'success':False}
             try:
-                app.demo();app.update();app.popup_3d();app.update();app.table_focus();app.update();app.table_focus();app.apply_theme('ดำ–แดง');app.update()
-                report={'success':True,'title':app.title(),'cells':len(app.grid.values),'icons':len(app._icons),'graph_window':bool(app.popup.winfo_exists())}
+                app.demo();app.update()
+                raw=bytes(app.doc.data);app.new_document(Document(raw),None);app.update();assert app.current is None and not app.grid.values
+                import tempfile
+                xml='<XDFFORMAT><XDFTABLE><title>ตารางจาก XDF</title><description>เก่า</description><XDFAXIS id="x"><indexcount>16</indexcount></XDFAXIS><XDFAXIS id="y"><indexcount>16</indexcount></XDFAXIS><XDFAXIS id="z"><EMBEDDEDDATA mmedaddress="0x400" mmedtypeflags="2" mmedelementsizebits="16" mmedrowcount="16" mmedcolcount="16" mmedmajorstridebits="16" mmedminorstridebits="0"/><MATH equation="X/100"/></XDFAXIS></XDFTABLE></XDFFORMAT>'
+                with tempfile.TemporaryDirectory() as tmp:
+                    path=Path(tmp)/'legacy_thai.xdf';path.write_bytes(xml.encode('cp874').replace(b'</description>',b'\x90</description>'));app.load_xdf(path,False);app.update();assert app.current['name']=='ตารางจาก XDF' and len(app.grid.values)==256
+                app.popup_3d();app.update();app.table_focus();app.update();app.table_focus();app.apply_theme('ดำ–แดง');app.update()
+                report={'success':True,'title':app.title(),'cells':len(app.grid.values),'icons':len(app._icons),'graph_window':bool(app.popup.winfo_exists()),'xdf_loaded':bool(app.xdf_path),'legacy_0x90':True,'blank_without_xdf':True}
                 if '--capture' in sys.argv:
                     from PIL import ImageGrab
                     ImageGrab.grab().save(os.environ.get('PTS_CAPTURE_PATH','PTS_Studio_preview.png'))
