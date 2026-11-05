@@ -6,6 +6,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from engine import spec,raw_values,display_values
 from equations import parse,affine
+from native_xdf import is_native_xdf,read_native_xdf
 
 
 def integer(v,default=0):
@@ -33,7 +34,10 @@ def decode_xdf(raw,encoding='auto'):
     enc=single[0];text=raw.decode(enc,errors='replace');return text,enc,text.count('\ufffd')
 
 def read_xml(raw,encoding='auto',with_info=False):
+    native=is_native_xdf(raw)
+    if native:raw=read_native_xdf(raw)
     text,used,replaced=decode_xdf(raw,encoding)
+    if native:used='XDF ไบนารี → '+used
     if '<!DOCTYPE' in text.upper() or '<!ENTITY' in text.upper():raise ValueError('ไม่รองรับ DTD หรือ entity ภายนอกใน XDF')
     text=re.sub(r'(<\?xml[^>]*encoding=)[\'"][^\'"]+[\'"]',r'\1"utf-8"',text,count=1,flags=re.I)
     try:root=ET.fromstring(text)
@@ -67,13 +71,21 @@ def import_xdf(path,doc,encoding='auto'):
     if Path(path).stat().st_size>16*1024*1024:raise ValueError('XDF ใหญ่เกิน 16 MB')
     return parse_xdf(Path(path).read_bytes(),doc,encoding)
 
+def display_text(text):
+    text=text or ''
+    if any('\u0e00'<=c<='\u0e7f' for c in text):return text
+    try:fixed=text.encode('cp1252').decode('cp874')
+    except (UnicodeEncodeError,UnicodeDecodeError):return text
+    if sum('\u0e00'<=c<='\u0e7f' for c in fixed)>=3:return fixed
+    return text
+
 def parse_xdf(raw,doc,encoding='auto'):
-    root,used,replaced=read_xml(raw,encoding,True);header=root.find('XDFHEADER');defaults={};base=0;categories={};warnings=[];accepted=[];report=[]
+    root,used,replaced=read_xml(raw,encoding,True);node_index={integer(n.get('uniqueid')):n for n in root if n.get('uniqueid')};header=root.find('XDFHEADER');defaults={};base=0;categories={};axis_sources={};warnings=[];accepted=[];report=[]
     if header is not None:
         d=header.find('DEFAULTS');defaults=dict(d.attrib) if d is not None else {}
         b=header.find('BASEOFFSET')
         if b is not None:base=integer(b.get('offset'))*(-1 if integer(b.get('subtract')) else 1)
-        for cat in header.findall('CATEGORY'):categories[integer(cat.get('index'))+1]=cat.get('name','')
+        for cat in header.findall('CATEGORY'):categories[integer(cat.get('index'))+1]=display_text(cat.get('name',''))
     def axis_values(axis,count,name):
         if axis is None:return list(range(count)),name+' ไม่มีนิยาม จึงใช้หมายเลขช่อง'
         labels=axis.findall('LABEL')
@@ -83,13 +95,25 @@ def parse_xdf(raw,doc,encoding='auto'):
                 if len(values)==count and all(i in values for i in range(count)):return [values[i] for i in range(count)],None
             except (TypeError,ValueError):pass
         embed=axis.find('embedinfo')
-        if embed is not None and integer(embed.get('type')) in (2,3):return list(range(count)),name+' อ้างอิงนิยามอื่น จึงใช้หมายเลขช่อง'
+        if embed is not None and integer(embed.get('type'))==3:
+            try:
+                target=node_index.get(integer(embed.get('linkobjid')))
+                if target is None:raise ValueError('ไม่พบตารางแกนที่อ้างอิง')
+                z=target.find("XDFAXIS[@id='z']") if target.tag=='XDFTABLE' else target
+                mem=z.find('EMBEDDEDDATA');data=storage(mem,defaults,base)
+                rows=integer(mem.get('mmedrowcount'),1);cols=integer(mem.get('mmedcolcount'),1)
+                if rows*cols!=count:raise ValueError('ขนาดตารางอ้างอิงไม่ตรงกับจำนวนแกน')
+                data.update(name=name,rows=rows,cols=cols,factor=1,offset=0,equation=equation(z))
+                source=spec(data,doc);axis_sources[name]=source
+                return display_values(doc,source),None
+            except (ValueError,TypeError,AttributeError,SyntaxError) as exc:return list(range(count)),name+' แกนอ้างอิงอ่านไม่ได้: '+str(exc)
+        if embed is not None and integer(embed.get('type'))==2:return list(range(count)),name+' รูปแบบแกนอ้างอิงนี้ยังไม่รองรับ' 
         try:
             data=storage(axis.find('EMBEDDEDDATA'),defaults,base);data.update(name=name,rows=1,cols=count,factor=1,offset=0);data['equation']=equation(axis);return display_values(doc,spec(data,doc)),None
         except (ValueError,TypeError,OverflowError,SyntaxError) as exc:return list(range(count)),name+' ใช้หมายเลขช่อง: '+str(exc)
     for node in root:
         if node.tag not in ('XDFTABLE','XDFCONSTANT','XDFFLAG','XDFPATCH'):continue
-        title=node.findtext('title') or node.get('name') or node.tag
+        original_title=node.findtext('title') or node.get('name') or node.tag;title=display_text(original_title)
         try:
             if node.tag not in ('XDFTABLE','XDFCONSTANT'):raise ValueError('ยังไม่รองรับ bit flag หรือแพตช์คำสั่งจาก XDF')
             axes={a.get('id'):a for a in node.findall('XDFAXIS')}
@@ -104,11 +128,12 @@ def parse_xdf(raw,doc,encoding='auto'):
                 n=integer(ax.findtext('indexcount'),0) if ax is not None else 0
                 current=cols if key=='cols' else rows
                 if n and n!=current:raise ValueError('จำนวนแกนไม่ตรงกับขนาดที่ระบุใน EMBEDDEDDATA')
-            eq=equation(z);m.update(name=title,description=node.findtext('description') or '',rows=rows,cols=cols,unit=z.findtext('units') or '',factor=1,offset=0,equation=eq,xdf_id=node.get('uniqueid',''))
-            notes=[]
+            eq=equation(z);m.update(name=title,source_name=original_title,description=display_text(node.findtext('description')),rows=rows,cols=cols,unit=display_text(z.findtext('units')),factor=1,offset=0,equation=eq,xdf_id=node.get('uniqueid',''))
+            notes=[];axis_sources.clear()
             for key,ax,count in [('x_axis',axes.get('x'),cols),('y_axis',axes.get('y'),rows)]:
                 values,note=axis_values(ax,count,key);m[key]=values
                 if note:notes.append(note)
+            m['axis_sources']=dict(axis_sources)
             cats=[categories.get(integer(c.get('category')),'') for c in node.findall('CATEGORYMEM')];m['category']=' / '.join(c for c in cats if c)
             try:
                 a,b=affine(eq)
@@ -118,6 +143,14 @@ def parse_xdf(raw,doc,encoding='auto'):
             m=spec(m,doc);display_values(doc,m);accepted.append(m);report.append('รับแล้ว: '+title+(' [อ่านอย่างเดียว]' if m.get('read_only') else '')+''.join('\n  '+n for n in notes))
         except (ValueError,TypeError,OverflowError,KeyError,SyntaxError,ET.ParseError) as exc:report.append('ข้าม: '+title+' — '+str(exc))
     if not report:raise ValueError('ไม่พบตารางหรือค่าคงที่ใน XDF')
+    locations={}
+    for m in accepted:
+        region=(m['address'],m['rows']*m['cols']*m['bits']//8)
+        if region in locations:report.append('ข้อมูลตำแหน่งร่วม: '+m['name']+' ใช้ไบต์เดียวกับ '+locations[region])
+        else:locations[region]=m['name']
     info=f'รหัสอักขระ: {used}'
+    if header is not None:
+        title=header.findtext('deftitle') or ''
+        if title:report.append('ชื่อภายใน XDF: '+display_text(title).strip())
     if replaced:info+=f' • อักขระในข้อความที่อ่านไม่ได้แทนด้วย � จำนวน {replaced} ตัว กรุณาตรวจชื่อและคำอธิบาย หรือเลือกรหัสอักขระเอง'
     return accepted,report+[info]

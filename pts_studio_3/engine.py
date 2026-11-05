@@ -158,3 +158,13 @@ def candidate_regions(doc,bits=16,endian='little',width=16):
         score=1-sum(jumps)/len(jumps)/span
         if score>.90:result.append((score,address))
     return sorted(result,reverse=True)[:100]
+
+
+def refresh_linked_axes(doc,m):
+    # Resolve linked axis values again after a BIN edit; never rewrite axis bytes here.
+    for key,source in m.get('axis_sources',{}).items():
+        if key not in ('x_axis','y_axis'):raise ValueError('นิยามแหล่งแกนไม่ถูกต้อง')
+        data={k:v for k,v in source.items() if k not in ('axis_sources',)}
+        source=spec(data,doc);values=display_values(doc,source)
+        if len(values)!=(m['cols'] if key=='x_axis' else m['rows']):raise ValueError('ขนาดแกนอ้างอิงไม่ตรงกับตาราง')
+        m[key]=values
